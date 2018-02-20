@@ -1,0 +1,6 @@
+.gradle/
+.meghanada/
+*.jar
+*.class
+build/
+javassist-3.22.0-GA/
