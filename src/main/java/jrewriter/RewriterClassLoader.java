@@ -2,6 +2,7 @@ package jrewriter;
 
 import java.io.*;
 import javassist.ClassPool;
+import javassist.NotFoundException;
 
 
 public class RewriterClassLoader extends ClassLoader {
@@ -14,12 +15,15 @@ public class RewriterClassLoader extends ClassLoader {
     }
 
     @Override
-    public Class<?> loadClass(String className) throws ClassNotFoundException {
+    public Class<?> loadClass(String className)
+        throws ClassNotFoundException {
+
         if (className.startsWith("jrewrite.")) {
             // do not load myself
             return super.loadClass(className);
         } else {
             System.out.println("loading " + className);
+            RefFinder.fieldRef(pool, className);
             return super.loadClass(className);
         }
     }

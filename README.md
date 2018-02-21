@@ -1,6 +1,6 @@
 # jrewriter
 
-Rewriter direct field accesses with getters and setters at bytecode
+Rewrite direct field references with getters and setters at bytecode
 level.
 
 To run the library, first build with `gradle build`, then put the jar
