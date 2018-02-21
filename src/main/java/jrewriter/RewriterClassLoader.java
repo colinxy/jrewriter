@@ -1,12 +1,17 @@
 package jrewriter;
 
 import java.io.*;
-import javassist.ClassPool;
-import javassist.NotFoundException;
+import javassist.*;
+import java.util.*;
 
 
 public class RewriterClassLoader extends ClassLoader {
     private ClassPool pool;
+
+    String[] whitelist = {
+        "jrewrite.",
+        "java.",
+    };
 
     public RewriterClassLoader(ClassLoader parent) {
         super(parent);
@@ -18,13 +23,16 @@ public class RewriterClassLoader extends ClassLoader {
     public Class<?> loadClass(String className)
         throws ClassNotFoundException {
 
-        if (className.startsWith("jrewrite.")) {
-            // do not load myself
+        if (Arrays.stream(whitelist)
+            .anyMatch(wl -> className.startsWith(wl))) {
+
             return super.loadClass(className);
         } else {
             System.out.println("loading " + className);
-            RefFinder.fieldRef(pool, className);
-            return super.loadClass(className);
+
+            Rewriter rewriter = new Rewriter(pool, className);
+            byte[] b = rewriter.toBytecode();
+            return defineClass(className, b, 0, b.length);
         }
     }
 }

@@ -2,9 +2,17 @@
 import java.lang.reflect.InvocationTargetException;
 import jrewriter.RewriterClassLoader;
 import org.junit.Test;
+import org.junit.Before;
 
 
-public class MainTest {
+public class SimpleTest {
+    RewriterClassLoader loader;
+
+    @Before()
+    public void setUp() {
+        loader = new RewriterClassLoader(SimpleTest.class.getClassLoader());
+    }
+
     @Test()
     public void test()
         throws ClassNotFoundException
@@ -13,10 +21,9 @@ public class MainTest {
         , NoSuchMethodException
         , InvocationTargetException {
 
-        RewriterClassLoader loader =
-            new RewriterClassLoader(MainTest.class.getClassLoader());
         Class<?> simple = loader.loadClass("Simple");
         Object instance = simple.newInstance();
         simple.getMethod("refSelf").invoke(instance);
     }
+
 }

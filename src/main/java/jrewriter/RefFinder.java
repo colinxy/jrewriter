@@ -9,14 +9,7 @@ import java.util.List;
 
 public class RefFinder {
 
-    public static void fieldRef(ClassPool pool, String className) {
-        CtClass cc;
-        try {
-            cc = pool.get(className);
-        } catch (NotFoundException ex) {
-            ex.printStackTrace();
-            throw new RuntimeException(ex.getMessage());
-        }
+    public static void fieldRef(CtClass cc) {
         ClassFile cf = cc.getClassFile();
         ConstPool constPool = cf.getConstPool();
 
@@ -45,5 +38,8 @@ public class RefFinder {
                 }
             }
         }
+
+        // if this method operates on the same object that it
+        // references the field from, do nothing
     }
 }
