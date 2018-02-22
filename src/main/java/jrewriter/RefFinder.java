@@ -1,15 +1,14 @@
 package jrewriter;
 
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.NotFoundException;
-import javassist.bytecode.*;
 import java.util.List;
+import java.util.ArrayList;
+import javassist.*;
+import javassist.bytecode.*;
 
 
 public class RefFinder {
 
-    public static void fieldRef(CtClass cc) {
+    public static void fieldRef(CtClass cc) throws BadBytecode {
         ClassFile cf = cc.getClassFile();
         ConstPool constPool = cf.getConstPool();
 
@@ -21,19 +20,21 @@ public class RefFinder {
             CodeIterator ci = ca.iterator();
 
             while (ci.hasNext()) {
-                int index;
-                try {
-                    index = ci.next();
-                } catch (BadBytecode ex) {
-                    ex.printStackTrace();
-                    throw new RuntimeException(ex.getMessage());
-                }
+                int index = ci.next();
 
                 int constPoolIndex;
                 switch (ci.byteAt(index)) {
                 case Opcode.GETFIELD:
                     constPoolIndex = ci.u16bitAt(index+1);
-                    System.out.println("getfield " + constPoolIndex);
+                    System.out.println(minfo.getName()
+                                       + ": getfield "
+                                       + constPoolIndex);
+                    break;
+                case Opcode.PUTFIELD:
+                    constPoolIndex = ci.u16bitAt(index+1);
+                    System.out.println(minfo.getName()
+                                       + ": putfield "
+                                       + constPoolIndex);
                     break;
                 }
             }

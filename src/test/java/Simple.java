@@ -4,16 +4,21 @@ public class Simple {
 
     public int refSelf() {
         int x = field + 1;
+        field = x;
         return x;
     }
 
     public static int refOther1() {
-        int x = new Simple().field + 1;
+        Simple s = new Simple();
+        int x = s.field + 1;
+        s.field = x;
         return x;
     }
 
     public static int refOther2() {
-        int x = new Holder().field + 1;
+        Holder h = new Holder();
+        int x = h.field + 1;
+        h.field = x;
         return x;
     }
 }
