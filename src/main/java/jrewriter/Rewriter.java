@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import javassist.*;
 import javassist.bytecode.*;
+import javassist.expr.*;
 
 
 public class Rewriter {
@@ -44,35 +45,39 @@ public class Rewriter {
     }
 
     public void addGettersSetters() throws CannotCompileException {
+        // TODO: add getter and setter for all class
         for (CtField field : cc.getDeclaredFields()) {
             addGetter(field);
             addSetter(field);
         }
     }
 
-    public void rewrite() throws BadBytecode {
-        List<MethodInfo> methods = classFile.getMethods();
+    public void rewrite() throws CannotCompileException {
+        CtBehavior[] behaviors = cc.getDeclaredBehaviors();
 
-        // TODO: lookup javassist.expr.ExprEditor and
-        // javassist.expr.FieldAccess
-
-        for (MethodInfo minfo : methods) {
-            CodeAttribute ca = minfo.getCodeAttribute();
-            CodeIterator ci = ca.iterator();
-
-            while (ci.hasNext()) {
-                int index = ci.next();
-
-                int constPoolIndex;
-                switch (ci.byteAt(index)) {
-                case Opcode.GETFIELD:
-                    rewriteGetter(ci, index);
-                    break;
-                case Opcode.PUTFIELD:
-                    rewriteSetter(ci, index);
-                    break;
-                }
+        for (CtBehavior behavior : behaviors) {
+            if (behavior.getName().startsWith("get$")
+                || behavior.getName().startsWith("set$")) {
+                continue;
             }
+
+            behavior.instrument(
+                new ExprEditor() {
+                    public void edit(FieldAccess f) throws CannotCompileException {
+                        if (f.isReader()) {
+                            String klass = f.getClassName();
+                            String field = f.getFieldName();
+                            System.out.println(klass + " " + field);
+
+                            String get = String.format("$_ = $0.get$%s();", field);
+                            // TODO: create getter and setter for all classes before rewriting field access
+                            if (klass.equals(cc.getName()))
+                                f.replace(get);
+                        } else if (f.isWriter()) {
+
+                        }
+                    }
+                });
         }
     }
 
@@ -90,21 +95,5 @@ public class Rewriter {
         CtMethod setter = CtNewMethod.setter(
             "set$" + field.getName(), field);
         cc.addMethod(setter);
-    }
-
-    private void rewriteGetter(CodeIterator ci, int index) {
-        int constPoolIndex = ci.u16bitAt(index+1);
-        int tag = constPool.getTag(index);
-        switch (tag) {
-        case ConstPool.CONST_Fieldref:
-            break;
-        }
-
-        // invoke the getter with invokespecial
-        // TODO: work under polymorphism?
-    }
-
-    private void rewriteSetter(CodeIterator ci, int index) {
-
     }
 }
