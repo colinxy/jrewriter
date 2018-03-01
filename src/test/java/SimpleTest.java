@@ -23,7 +23,14 @@ public class SimpleTest {
 
         Class<?> simple = loader.loadClass("Simple");
         Object instance = simple.newInstance();
-        simple.getMethod("refSelf").invoke(instance);
+
+        System.out.println("\n--> Test output");
+
+        int x1 = (Integer) simple.getMethod("refSelf").invoke(instance);
+        System.out.println("refSelf: " + x1);
+
+        int x2 = (Integer) simple.getMethod("refOther1").invoke(null);
+        System.out.println("refOther1: " + x2);
     }
 
 }

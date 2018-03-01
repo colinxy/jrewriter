@@ -25,6 +25,7 @@ public class RewriterClassLoader extends ClassLoader {
 
         if (Arrays.stream(whitelist)
             .anyMatch(wl -> className.startsWith(wl))) {
+            System.out.println("loading " + className + " by system");
 
             return super.loadClass(className);
         } else {

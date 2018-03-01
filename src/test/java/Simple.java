@@ -22,7 +22,3 @@ public class Simple {
         return x;
     }
 }
-
-class Holder {
-    int field = 0;
-}

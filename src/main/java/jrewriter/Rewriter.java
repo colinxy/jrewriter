@@ -67,13 +67,21 @@ public class Rewriter {
                         if (f.isReader()) {
                             String klass = f.getClassName();
                             String field = f.getFieldName();
-                            System.out.println(klass + " " + field);
+                            System.out.println("getfield "
+                                               + klass + " " + field);
 
+                            // TODO: this will generate a invokevirtual
+                            // but we want a invokespecial
                             String get = String.format("$_ = $0.get$%s();", field);
-                            // TODO: create getter and setter for all classes before rewriting field access
+                            // TODO: create getter and setter for all classes
+                            // before rewriting field access
                             if (klass.equals(cc.getName()))
                                 f.replace(get);
                         } else if (f.isWriter()) {
+                            String klass = f.getClassName();
+                            String field = f.getFieldName();
+                            System.out.println("putfield "
+                                               + klass + " " + field);
 
                         }
                     }
