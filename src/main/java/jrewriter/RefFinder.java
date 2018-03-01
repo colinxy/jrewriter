@@ -43,4 +43,8 @@ public class RefFinder {
         // if this method operates on the same object that it
         // references the field from, do nothing
     }
+
+    public static void incrementRef() throws BadBytecode {
+        // TODO: code to identify sequence of increment field
+    }
 }
