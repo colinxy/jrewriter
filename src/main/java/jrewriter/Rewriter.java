@@ -25,6 +25,6 @@ public class Rewriter {
 
     public byte[] toBytecode() {
         throw new UnsupportedOperationException(
-            "Use one the subclasses");
+            "Use one of the subclasses");
     }
 }

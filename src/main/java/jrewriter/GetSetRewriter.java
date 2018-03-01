@@ -72,6 +72,10 @@ public class GetSetRewriter extends Rewriter {
                             System.out.println("putfield "
                                                + klass + " " + field);
 
+                            // TODO: same problem as getter
+                            String set = String.format("$0.set$%s($1);", field);
+                            if (klass.equals(cc.getName()))
+                                f.replace(set);
                         }
                     }
                 });
