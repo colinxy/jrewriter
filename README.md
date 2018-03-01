@@ -1,5 +1,8 @@
 # jrewriter
 
+Test with `gradle test --rerun-tasks`.
+
+
 Rewrite direct field references with getters and setters at bytecode
 level.
 

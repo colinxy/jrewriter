@@ -31,7 +31,7 @@ public class RewriterClassLoader extends ClassLoader {
         } else {
             System.out.println("loading " + className);
 
-            Rewriter rewriter = new Rewriter(pool, className);
+            Rewriter rewriter = new GetSetRewriter(pool, className);
             byte[] b = rewriter.toBytecode();
             return defineClass(className, b, 0, b.length);
         }

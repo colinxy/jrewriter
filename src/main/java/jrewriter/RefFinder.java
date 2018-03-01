@@ -45,6 +45,6 @@ public class RefFinder {
     }
 
     public static void incrementRef() throws BadBytecode {
-        // TODO: code to identify sequence of increment field
+        // TODO: code to identify sequence of bytecode that increments field
     }
 }
