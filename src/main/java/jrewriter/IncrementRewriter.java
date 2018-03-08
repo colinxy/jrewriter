@@ -15,9 +15,8 @@ public class IncrementRewriter extends Rewriter {
     public byte[] toBytecode() {
         try {
             addUnsafe();
+            rewriteIncrement();
 
-            // classFile.write(
-            //     new DataOutputStream(new FileOutputStream("Simple.class")));
             return cc.toBytecode();
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -29,8 +28,6 @@ public class IncrementRewriter extends Rewriter {
     }
 
     public void addUnsafe() throws CannotCompileException {
-        // constPool.addClassInfo("sun/misc/Unsafe");
-
         FieldInfo unsafe = new FieldInfo(
             constPool, "$theUnsafe", Descriptor.of("sun.misc.Unsafe"));
         unsafe.setAccessFlags(AccessFlag.STATIC | AccessFlag.PRIVATE);
@@ -40,21 +37,39 @@ public class IncrementRewriter extends Rewriter {
         CtConstructor staticInit = cc.makeClassInitializer();
         staticInit.insertBefore(
             "{" +
-            "java.lang.reflect.Field theUnSafeField;" +
+            "java.lang.reflect.Field theUnsafeField;" +
             "try {" +
-            "    theUnSafeField = sun.misc.Unsafe.class.getDeclaredField(\"theUnsafe\");" +
+            "    theUnsafeField = sun.misc.Unsafe.class.getDeclaredField(\"theUnsafe\");" +
             "} catch (NoSuchFieldException ex) {" +
             "    ex.printStackTrace();" +
             "    throw new RuntimeException(ex);" +
             "}" +
-            "theUnSafeField.setAccessible(true);" +
+            "theUnsafeField.setAccessible(true);" +
             "try {" +
-            "    $theUnsafe = (sun.misc.Unsafe) theUnSafeField.get(null);" +
+            "    $theUnsafe = (sun.misc.Unsafe) theUnsafeField.get(null);" +
             "} catch (IllegalAccessException ex) {" +
             "    ex.printStackTrace();" +
             "    throw new RuntimeException(ex);" +
             "}" +
             "}");
+
+    }
+
+    public void rewriteIncrement() {
+        // TODO
+
+        // locate sequence of bytecode that does increment
+        // (consider using ExprEditor)
+
+        // get java.lang.reflect.Field objects for relavant fields
+        // <Class>.class.getDeclaredField("field")
+
+        // get offset
+        // for statis fields: $theUnsafe.staticFieldOffset(field)
+        // for object fields: $theUnsafe.objectFieldOffset(field)
+
+        // $theUnsafe.getAndAddInt
+        // $theUnsafe.getAndAddLong
     }
 }
 
