@@ -11,6 +11,7 @@ public class RewriterClassLoader extends ClassLoader {
     String[] whitelist = {
         "jrewrite.",
         "java.",
+        "sun.",
     };
 
     public RewriterClassLoader(ClassLoader parent) {
