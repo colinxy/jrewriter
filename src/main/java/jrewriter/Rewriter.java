@@ -17,6 +17,8 @@ public class Rewriter {
             cc = pool.get(className);
             classFile = cc.getClassFile();
             constPool = classFile.getConstPool();
+
+            CtClass.debugDump = "./debugDump";
         } catch (NotFoundException ex) {
             ex.printStackTrace();
             throw new RuntimeException(ex.getMessage());

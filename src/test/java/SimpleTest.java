@@ -22,7 +22,13 @@ public class SimpleTest {
         , InvocationTargetException {
 
         Class<?> simple = loader.loadClass("Simple");
-        Object instance = simple.newInstance();
+        Object instance;
+        try {
+            instance = simple.newInstance();
+        } catch (Error err) {
+            err.printStackTrace();
+            throw new Error(err);
+        }
 
         System.out.println("\n--> Test output");
 
