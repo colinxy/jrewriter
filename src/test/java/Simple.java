@@ -1,9 +1,13 @@
 
 public class Simple {
     int field = 0;
+    final int immutable;
 
     static {
         System.out.println("Hello from static initializer");
+    } {
+        System.out.println("Hello from initializer");
+        immutable = 100;
     }
 
     public int refSelf() {
