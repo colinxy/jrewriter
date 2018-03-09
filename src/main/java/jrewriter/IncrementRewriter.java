@@ -37,19 +37,19 @@ public class IncrementRewriter extends Rewriter {
         CtConstructor staticInit = cc.makeClassInitializer();
         staticInit.insertBefore(
             "{" +
-            "java.lang.reflect.Field theUnsafeField;" +
+            "java.lang.reflect.Field $theUnsafeField;" +
             "try {" +
-            "    theUnsafeField = sun.misc.Unsafe.class.getDeclaredField(\"theUnsafe\");" +
+            "    $theUnsafeField = sun.misc.Unsafe.class.getDeclaredField(\"theUnsafe\");" +
             "} catch (NoSuchFieldException ex) {" +
             "    ex.printStackTrace();" +
-            "    throw new RuntimeException(ex);" +
+            "    throw new Error(ex);" +
             "}" +
-            "theUnsafeField.setAccessible(true);" +
+            "$theUnsafeField.setAccessible(true);" +
             "try {" +
-            "    $theUnsafe = (sun.misc.Unsafe) theUnsafeField.get(null);" +
+            "    $theUnsafe = (sun.misc.Unsafe) $theUnsafeField.get(null);" +
             "} catch (IllegalAccessException ex) {" +
             "    ex.printStackTrace();" +
-            "    throw new RuntimeException(ex);" +
+            "    throw new Error(ex);" +
             "}" +
             "}");
 
@@ -59,7 +59,6 @@ public class IncrementRewriter extends Rewriter {
         // TODO
 
         // locate sequence of bytecode that does increment
-        // (consider using ExprEditor)
 
         // get java.lang.reflect.Field objects for relavant fields
         // <Class>.class.getDeclaredField("field")
@@ -72,10 +71,3 @@ public class IncrementRewriter extends Rewriter {
         // $theUnsafe.getAndAddLong
     }
 }
-
-
-// class IncrementExpr extends Expr {
-//     public void replace(String statement) {
-//         // TODO
-//     }
-// }

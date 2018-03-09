@@ -2,6 +2,10 @@
 public class Simple {
     int field = 0;
 
+    static {
+        System.out.println("Hello from static initializer");
+    }
+
     public int refSelf() {
         int x = field + 1;
         field = x;

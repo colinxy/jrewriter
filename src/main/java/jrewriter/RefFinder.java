@@ -47,7 +47,6 @@ public class RefFinder {
 
 
     public static void incrementRef(CtClass cc) throws BadBytecode {
-        // TODO: code to identify sequence of bytecode that increments field
         ClassFile cf = cc.getClassFile();
         ConstPool constPool = cf.getConstPool();
 
@@ -67,7 +66,7 @@ public class RefFinder {
                 int endIndex;
 
                 if (temp.byteAt(index) == Opcode.GETFIELD)
-                {   
+                {
                     startIndex = index;
                     constPoolIndex = temp.u16bitAt(index+1);
                     System.out.println("getfield "+constPoolIndex);
@@ -81,15 +80,15 @@ public class RefFinder {
                             System.out.println("IADD");
                             index = temp.next();
                             if (temp.byteAt(index) == Opcode.PUTFIELD) {
-                                if (constPoolIndex==temp.u16bitAt(index+1)) {
+                                if (constPoolIndex == temp.u16bitAt(index+1)) {
                                     System.out.println("putfield "+constPoolIndex);
                                     endIndex = temp.next();
                                 }
                             }
                         }
                     }
-                }   
+                }
             }
     }
-    } 
+    }
 }
