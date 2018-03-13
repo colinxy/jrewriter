@@ -21,7 +21,7 @@ public class IncrementRewriter extends Rewriter {
         } catch (IOException ex) {
             ex.printStackTrace();
             throw new RuntimeException(ex.getMessage());
-        } catch (CannotCompileException ex) {
+        } catch (BadBytecode | CannotCompileException ex) {
             ex.printStackTrace();
             throw new Error(ex.getMessage());
         }
@@ -54,7 +54,7 @@ public class IncrementRewriter extends Rewriter {
         // <Class>.class.getDeclaredField("field")
 
         // new because we want to avoid concurrent modification
-        List<FieldInfo> fields = new ArrayList<>(classFile.getFields());
+        final List<FieldInfo> fields = new ArrayList<>(classFile.getFields());
         for (FieldInfo finfo : fields) {
             // System.out.println(finfo.getName()+" "+finfo.getDescriptor());
 
@@ -88,12 +88,14 @@ public class IncrementRewriter extends Rewriter {
             else
                 getOffset += "offset${name} = $theUnsafe.objectFieldOffset(field${name});\n";
 
+            // getOffset += "System.out.println(\"{name}: \" + offset${name});\n";
+
             sb.append(getOffset
                       .replace("{name}", finfo.getName())
                       .replace("{class}", classFile.getName()));
         }
 
-        System.out.println(sb.toString());
+        // System.out.println(sb.toString());
         String getOffsets = sb.toString();
 
         // add static initializer
@@ -101,10 +103,22 @@ public class IncrementRewriter extends Rewriter {
         staticInit.insertBefore("{" + getUnsafe + getOffsets + "}");
     }
 
-    public void rewriteIncrement() {
+    public void rewriteIncrement() throws BadBytecode {
         // TODO
 
         // first locate sequence of bytecode that does increment
+        final List<MethodInfo> methods = classFile.getMethods();
+        for (MethodInfo minfo : methods) {
+            System.out.println(minfo.getName()+" "+minfo.getDescriptor());
+
+            CodeAttribute ca = minfo.getCodeAttribute();
+            CodeIterator ci = ca.iterator();
+
+            int index = getNextIncrement(ci);
+            while (index > 0) {
+                index = getNextIncrement(ci);
+            }
+        }
 
         // replace with
         // $theUnsafe.getAndAddInt
@@ -113,10 +127,14 @@ public class IncrementRewriter extends Rewriter {
         // add methods to constPool
 
         // static: $theUnsafe.getAndAddInt(Type.class, offset$field, delta)
-        // object: $theUnsafe.getAndAddInt(this, offset$field, delta)
+        // object: $theUnsafe.getAndAddInt(obj, offset$field, delta)
     }
 
-    private int getNextIncrement(CodeIterator ci) {
-        return -1;
+    private int getNextIncrement(CodeIterator ci) throws BadBytecode {
+        int index = -1;
+        while (ci.hasNext()) {
+            index = ci.next();
+        }
+        return index;
     }
 }
