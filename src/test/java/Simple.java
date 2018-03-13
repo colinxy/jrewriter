@@ -1,6 +1,7 @@
 
 public class Simple {
     int field = 0;
+    static int staticField = 100;
     final int immutable;
 
     static {

@@ -71,14 +71,13 @@ public class IncrementRewriter extends Rewriter {
             offset.setAccessFlags(AccessFlag.FINAL | AccessFlag.STATIC | AccessFlag.PRIVATE);
             classFile.addField(offset);
 
-            // TODO
-            // static fields work, but instance fields need to
-            // get when `this' is available
+            // TODO: might not work when the field is from super class
+            // getDeclaredField only returns the field declared in this class,
+            // not superClass
             String getOffset =
                 "java.lang.reflect.Field field${name};" +
                 "try {" +
-                // TODO
-                "    field${name} = ???.getDeclaredField(\"{name}\");" +
+                "    field${name} = {class}.class.getDeclaredField(\"{name}\");" +
                 "} catch (NoSuchFieldException ex) {" +
                 "    ex.printStackTrace();" +
                 "    throw new Error(ex);" +
@@ -89,11 +88,13 @@ public class IncrementRewriter extends Rewriter {
             else
                 getOffset += "offset${name} = $theUnsafe.objectFieldOffset(field${name});";
 
-            sb.append(getOffset.replace("{name}", finfo.getName()));
+            sb.append(getOffset
+                      .replace("{name}", finfo.getName())
+                      .replace("{class}", classFile.getName()));
         }
 
         System.out.println(sb.toString());
-        String getOffsets = ""; // sb.toString();
+        String getOffsets = sb.toString();
 
         // add static initializer
         CtConstructor staticInit = cc.makeClassInitializer();
