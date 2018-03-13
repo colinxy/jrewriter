@@ -34,20 +34,20 @@ public class IncrementRewriter extends Rewriter {
         classFile.addField(unsafe);
 
         String getUnsafe =
-            "java.lang.reflect.Field $theUnsafeField;" +
-            "try {" +
-            "    $theUnsafeField = sun.misc.Unsafe.class.getDeclaredField(\"theUnsafe\");" +
-            "} catch (NoSuchFieldException ex) {" +
-            "    ex.printStackTrace();" +
-            "    throw new Error(ex);" +
-            "}" +
-            "$theUnsafeField.setAccessible(true);" +
-            "try {" +
-            "    $theUnsafe = (sun.misc.Unsafe) $theUnsafeField.get(null);" +
-            "} catch (IllegalAccessException ex) {" +
-            "    ex.printStackTrace();" +
-            "    throw new Error(ex);" +
-            "}";
+            "java.lang.reflect.Field $theUnsafeField;\n" +
+            "try {\n" +
+            "    $theUnsafeField = sun.misc.Unsafe.class.getDeclaredField(\"theUnsafe\");\n" +
+            "} catch (NoSuchFieldException ex) {\n" +
+            "    ex.printStackTrace();\n" +
+            "    throw new Error(ex);\n" +
+            "}\n" +
+            "$theUnsafeField.setAccessible(true);\n" +
+            "try {\n" +
+            "    $theUnsafe = (sun.misc.Unsafe) $theUnsafeField.get(null);\n" +
+            "} catch (IllegalAccessException ex) {\n" +
+            "    ex.printStackTrace();\n" +
+            "    throw new Error(ex);\n" +
+            "}\n";
 
         StringBuilder sb = new StringBuilder();
         // get java.lang.reflect.Field objects for relavant fields
@@ -75,18 +75,18 @@ public class IncrementRewriter extends Rewriter {
             // getDeclaredField only returns the field declared in this class,
             // not superClass
             String getOffset =
-                "java.lang.reflect.Field field${name};" +
-                "try {" +
-                "    field${name} = {class}.class.getDeclaredField(\"{name}\");" +
-                "} catch (NoSuchFieldException ex) {" +
-                "    ex.printStackTrace();" +
-                "    throw new Error(ex);" +
-                "}";
+                "java.lang.reflect.Field field${name};\n" +
+                "try {\n" +
+                "    field${name} = {class}.class.getDeclaredField(\"{name}\");\n" +
+                "} catch (NoSuchFieldException ex) {\n" +
+                "    ex.printStackTrace();\n" +
+                "    throw new Error(ex);\n" +
+                "}\n";
 
             if ((finfo.getAccessFlags() & AccessFlag.STATIC) != 0)
-                getOffset += "offset${name} = $theUnsafe.staticFieldOffset(field${name});";
+                getOffset += "offset${name} = $theUnsafe.staticFieldOffset(field${name});\n";
             else
-                getOffset += "offset${name} = $theUnsafe.objectFieldOffset(field${name});";
+                getOffset += "offset${name} = $theUnsafe.objectFieldOffset(field${name});\n";
 
             sb.append(getOffset
                       .replace("{name}", finfo.getName())
