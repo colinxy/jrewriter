@@ -8,19 +8,14 @@ import javassist.expr.*;
 
 
 public class IncrementRewriter extends Rewriter {
-    public IncrementRewriter(ClassPool pool, String className) {
-        super(pool, className);
+    public IncrementRewriter(ClassPool pool, CtClass cc) {
+        super(pool, cc);
     }
 
-    public byte[] toBytecode() {
+    public void rewrite() {
         try {
             prepUnsafeOffset();
             rewriteIncrement();
-
-            return cc.toBytecode();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            throw new RuntimeException(ex.getMessage());
         } catch (BadBytecode | CannotCompileException ex) {
             ex.printStackTrace();
             throw new Error(ex.getMessage());

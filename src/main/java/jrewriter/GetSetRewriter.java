@@ -8,26 +8,20 @@ import javassist.expr.*;
 
 
 public class GetSetRewriter extends Rewriter {
-    public GetSetRewriter(ClassPool pool, String className) {
-        super(pool, className);
+    public GetSetRewriter(ClassPool pool, CtClass cc) {
+        super(pool, cc);
     }
 
-    public byte[] toBytecode() {
+    public void rewrite() {
         // find direct field references
         // then rewrite with getter and setter
 
-        // TODO: error handling
         try {
             RefFinder.fieldRef(cc);
 
             addGettersSetters();
-            rewrite();
-            cc.writeFile();
-            return cc.toBytecode();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            throw new RuntimeException(ex.getMessage());
-        } catch (BadBytecode | NotFoundException | CannotCompileException ex) {
+            rewriteAccess();
+        } catch (BadBytecode | CannotCompileException ex) {
             ex.printStackTrace();
             throw new Error(ex.getMessage());
         }
@@ -41,7 +35,7 @@ public class GetSetRewriter extends Rewriter {
         }
     }
 
-    public void rewrite() throws CannotCompileException {
+    public void rewriteAccess() throws CannotCompileException {
         CtBehavior[] behaviors = cc.getDeclaredBehaviors();
 
         for (CtBehavior behavior : behaviors) {

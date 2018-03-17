@@ -18,11 +18,16 @@ public class RewriterClassLoader extends ClassLoader {
         super(parent);
 
         pool = ClassPool.getDefault();
+        // XXX: debug
+        CtClass.debugDump = "./debugDump";
     }
 
     @Override
     public Class<?> loadClass(String className)
         throws ClassNotFoundException {
+        Class<?> loaded = findLoadedClass(className);
+        if (loaded != null)
+            return loaded;
 
         if (Arrays.stream(whitelist)
             .anyMatch(wl -> className.startsWith(wl))) {
@@ -32,10 +37,19 @@ public class RewriterClassLoader extends ClassLoader {
         } else {
             System.out.println("loading " + className);
 
-            // Rewriter rewriter = new GetSetRewriter(pool, className);
-            Rewriter rewriter = new IncrementRewriter(pool, className);
-            byte[] b = rewriter.toBytecode();
-            return defineClass(className, b, 0, b.length);
+            CtClass cc;
+            try {
+                cc = pool.get(className);
+            } catch (NotFoundException ex) {
+                ex.printStackTrace();
+                throw new RuntimeException(ex);
+            }
+
+            // Rewriter rewriter = new GetSetRewriter(pool, cc);
+            Rewriter rewriter = new IncrementRewriter(pool, cc);
+            byte[] bytecode = rewriter.toBytecode();
+
+            return defineClass(className, bytecode, 0, bytecode.length);
         }
     }
 }
