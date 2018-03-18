@@ -18,6 +18,7 @@ public class GetSetRewriter extends Rewriter {
 
         try {
             RefFinder.fieldRef(cc);
+            RefFinder.incrementRef(cc);
 
             addGettersSetters();
             rewriteAccess();

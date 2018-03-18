@@ -12,8 +12,8 @@ public class Simple {
     }
 
     public int refSelf() {
-        int x = field + 1;
-        field = x;
+        int x = field;
+        field++;
         return x;
     }
 

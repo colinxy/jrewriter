@@ -8,6 +8,14 @@ import javassist.expr.*;
 
 
 public class IncrementRewriter extends Rewriter {
+    // sequence of bytecode that does increment
+    final int[] INCREMENT = {
+        Opcode.GETFIELD,
+        Opcode.ICONST_1,
+        Opcode.IADD,
+        Opcode.PUTFIELD,
+    };
+
     public IncrementRewriter(ClassPool pool, CtClass cc) {
         super(pool, cc);
     }
@@ -66,9 +74,6 @@ public class IncrementRewriter extends Rewriter {
             offset.setAccessFlags(AccessFlag.FINAL | AccessFlag.STATIC | AccessFlag.PRIVATE);
             classFile.addField(offset);
 
-            // TODO: might not work when the field is from super class
-            // getDeclaredField only returns the field declared in this class,
-            // not superClass
             String getOffset =
                 "java.lang.reflect.Field field${name};\n" +
                 "try {\n" +
@@ -101,7 +106,7 @@ public class IncrementRewriter extends Rewriter {
     public void rewriteIncrement() throws BadBytecode {
         // TODO
 
-        // first locate sequence of bytecode that does increment
+        // locate sequence of bytecode that does increment
         final List<MethodInfo> methods = classFile.getMethods();
         for (MethodInfo minfo : methods) {
             System.out.println(minfo.getName()+" "+minfo.getDescriptor());
@@ -109,9 +114,12 @@ public class IncrementRewriter extends Rewriter {
             CodeAttribute ca = minfo.getCodeAttribute();
             CodeIterator ci = ca.iterator();
 
-            int index = getNextIncrement(ci);
+            int index = getNextSequence(ci, INCREMENT);
             while (index > 0) {
-                index = getNextIncrement(ci);
+                int constPoolIndex = ci.u16bitAt(index+1);
+                System.out.println("GETFIELD " + constPoolIndex);
+
+                index = getNextSequence(ci, INCREMENT);
             }
         }
 
@@ -125,11 +133,40 @@ public class IncrementRewriter extends Rewriter {
         // object: $theUnsafe.getAndAddInt(obj, offset$field, delta)
     }
 
-    private int getNextIncrement(CodeIterator ci) throws BadBytecode {
+    /**
+     * returns -1 if got to the end of CodeIterator
+     */
+    private int getNextSequence(CodeIterator ci, int[] seq) throws BadBytecode {
         int index = -1;
+        int beginIndex = -1;    // begin index of the matched sequence
+
+        boolean next = true;
+        int toMatch = 0;
         while (ci.hasNext()) {
-            index = ci.next();
+            // found a match!
+            if (toMatch == seq.length)
+                break;
+
+            if (next)
+                index = ci.next();
+
+            if (ci.byteAt(index) != seq[toMatch]) {
+                beginIndex = -1;
+                if (toMatch == 0) {
+                    next = true;
+                    continue;
+                }
+                toMatch = 0;
+                next = false;
+                continue;
+            }
+
+            if (toMatch == 0) {
+                beginIndex = index;
+            }
+            toMatch++;
+            next = true;
         }
-        return index;
+        return beginIndex;
     }
 }
