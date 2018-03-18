@@ -142,22 +142,21 @@ public class IncrementRewriter extends Rewriter {
 
         boolean next = true;
         int toMatch = 0;
-        while (ci.hasNext()) {
+        while (true) {
             // found a match!
             if (toMatch == seq.length)
-                break;
+                return beginIndex;
 
-            if (next)
+            if (next) {
+                if (!ci.hasNext())
+                    return -1;
                 index = ci.next();
+            }
 
             if (ci.byteAt(index) != seq[toMatch]) {
                 beginIndex = -1;
-                if (toMatch == 0) {
-                    next = true;
-                    continue;
-                }
+                next = (toMatch == 0);
                 toMatch = 0;
-                next = false;
                 continue;
             }
 
@@ -167,6 +166,6 @@ public class IncrementRewriter extends Rewriter {
             toMatch++;
             next = true;
         }
-        return beginIndex;
+        // throw new RuntimeException("getNextSequence bug");
     }
 }
