@@ -46,6 +46,7 @@ jar {
 }
 
 test {
+    environment "JREWRITER_DEBUG", "1"
     testLogging {
         events "passed", "skipped", "failed", "standardOut", "standardError"
     }

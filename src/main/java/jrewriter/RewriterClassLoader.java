@@ -8,9 +8,16 @@ import java.util.*;
 public class RewriterClassLoader extends ClassLoader {
     private ClassPool pool;
 
-    String[] whitelist = {
-        "jrewrite.",
+    final static boolean DEBUG = !Optional
+        .ofNullable(System.getenv("JREWRITER_DEBUG"))
+        .orElse("")
+        .equals("");
+
+    final String[] whitelist = {
         "java.",
+        "javafx.",
+        "javax.",
+        "jrewrite.",
         "sun.",
     };
 
@@ -18,8 +25,8 @@ public class RewriterClassLoader extends ClassLoader {
         super(parent);
 
         pool = ClassPool.getDefault();
-        // XXX: debug
-        CtClass.debugDump = "./debugDump";
+        if (DEBUG)
+            CtClass.debugDump = "./debugDump";
     }
 
     @Override
@@ -31,11 +38,13 @@ public class RewriterClassLoader extends ClassLoader {
 
         if (Arrays.stream(whitelist)
             .anyMatch(wl -> className.startsWith(wl))) {
-            System.out.println("loading " + className + " by system");
+            if (DEBUG)
+                System.out.println("loading " + className + " by system");
 
             return super.loadClass(className);
         } else {
-            System.out.println("loading " + className);
+            if (DEBUG)
+                System.out.println("loading " + className);
 
             CtClass cc;
             try {

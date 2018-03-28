@@ -6,7 +6,10 @@ import javassist.*;
 import javassist.bytecode.*;
 
 
-public class RefFinder {
+/**
+ * Experimental code
+ */
+class RefFinder {
 
     public static void fieldRef(CtClass cc) throws BadBytecode {
         ClassFile cf = cc.getClassFile();
@@ -42,8 +45,8 @@ public class RefFinder {
     }
 
 
-        // if this method operates on the same object that it
-        // references the field from, do nothing
+    // if this method operates on the same object that it
+    // references the field from, do nothing
 
 
     public static void incrementRef(CtClass cc) throws BadBytecode {
@@ -89,6 +92,6 @@ public class RefFinder {
                     }
                 }
             }
-    }
+        }
     }
 }

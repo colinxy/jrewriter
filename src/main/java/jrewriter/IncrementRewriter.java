@@ -99,7 +99,6 @@ public class IncrementRewriter extends Rewriter {
                       .replace("{class}", classFile.getName()));
         }
 
-        // System.out.println(sb.toString());
         String getOffsets = sb.toString();
 
         // add static initializer
@@ -112,7 +111,9 @@ public class IncrementRewriter extends Rewriter {
         // locate sequence of bytecode that does increment
         final List<MethodInfo> methods = classFile.getMethods();
         for (MethodInfo minfo : methods) {
-            System.out.println(minfo.getName()+" "+minfo.getDescriptor());
+            if (RewriterClassLoader.DEBUG)
+                System.out.println(
+                    "==> " + minfo.getName() + ":" + minfo.getDescriptor());
 
             CodeAttribute ca = minfo.getCodeAttribute();
             CodeIterator ci = ca.iterator();
@@ -133,7 +134,9 @@ public class IncrementRewriter extends Rewriter {
                 final int constPoolIndex = ci.u16bitAt(index+2);
                 String field = constPool.getFieldrefName(constPoolIndex);
                 String klass = constPool.getFieldrefClassName(constPoolIndex);
-                System.out.println("GETFIELD " + klass + "." + field);
+
+                if (RewriterClassLoader.DEBUG)
+                    System.out.println("getfield " + klass + "." + field);
 
                 int delta = 0;
                 int iconst = ci.byteAt(index+4);

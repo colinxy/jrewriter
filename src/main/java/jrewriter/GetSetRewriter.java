@@ -17,12 +17,12 @@ public class GetSetRewriter extends Rewriter {
         // then rewrite with getter and setter
 
         try {
-            RefFinder.fieldRef(cc);
-            RefFinder.incrementRef(cc);
+            // RefFinder.fieldRef(cc);
+            // RefFinder.incrementRef(cc);
 
             addGettersSetters();
             rewriteAccess();
-        } catch (BadBytecode | CannotCompileException ex) {
+        } catch (CannotCompileException ex) {
             ex.printStackTrace();
             throw new Error(ex.getMessage());
         }
@@ -51,8 +51,9 @@ public class GetSetRewriter extends Rewriter {
                         if (f.isReader()) {
                             String klass = f.getClassName();
                             String field = f.getFieldName();
-                            System.out.println("getfield "
-                                               + klass + " " + field);
+                            if (RewriterClassLoader.DEBUG)
+                                System.out.println("getfield "
+                                                   + klass + "." + field);
 
                             // TODO: this will generate a invokevirtual
                             // but we want a invokespecial
@@ -64,8 +65,9 @@ public class GetSetRewriter extends Rewriter {
                         } else if (f.isWriter()) {
                             String klass = f.getClassName();
                             String field = f.getFieldName();
-                            System.out.println("putfield "
-                                               + klass + " " + field);
+                            if (RewriterClassLoader.DEBUG)
+                                System.out.println("putfield "
+                                                   + klass + "." + field);
 
                             // TODO: same problem as getter
                             String set = String.format("$0.set$%s($1);", field);
