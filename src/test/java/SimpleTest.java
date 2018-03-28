@@ -37,6 +37,12 @@ public class SimpleTest {
 
         int x2 = (Integer) simple.getMethod("refOther1").invoke(null);
         System.out.println("refOther1: " + x2);
+
+        int x3 = (Integer) simple.getMethod("refOther2").invoke(null);
+        System.out.println("refOther2: " + x3);
+
+        int x4 = (Integer) simple.getMethod("refStatic").invoke(null);
+        System.out.println("refStatic: " + x4);
     }
 
 }

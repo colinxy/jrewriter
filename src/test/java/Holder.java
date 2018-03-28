@@ -1,4 +1,4 @@
 
 class Holder {
-    int field = 0;
+    int fieldOfHolder = 0;
 }
