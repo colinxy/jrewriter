@@ -25,15 +25,15 @@ public class IncrementRewriter extends Rewriter {
 
     public void rewrite() {
         try {
-            prepUnsafeOffset();
-            rewriteIncrement();
+            prepUnsafeOffsets();
+            rewriteIncrements();
         } catch (BadBytecode | CannotCompileException ex) {
             ex.printStackTrace();
             throw new Error(ex.getMessage());
         }
     }
 
-    public void prepUnsafeOffset() throws CannotCompileException {
+    public void prepUnsafeOffsets() throws CannotCompileException {
         FieldInfo unsafe = new FieldInfo(
             constPool, "$theUnsafe", Descriptor.of("sun.misc.Unsafe"));
         unsafe.setAccessFlags(AccessFlag.FINAL | AccessFlag.STATIC | AccessFlag.PRIVATE);
@@ -106,7 +106,7 @@ public class IncrementRewriter extends Rewriter {
         staticInit.insertBefore("{" + getUnsafe + getOffsets + "}");
     }
 
-    public void rewriteIncrement() throws BadBytecode {
+    public void rewriteIncrements() throws BadBytecode {
 
         // locate sequence of bytecode that does increment
         final List<MethodInfo> methods = classFile.getMethods();
@@ -135,58 +135,62 @@ public class IncrementRewriter extends Rewriter {
                 String field = constPool.getFieldrefName(constPoolIndex);
                 String klass = constPool.getFieldrefClassName(constPoolIndex);
 
-                if (RewriterClassLoader.DEBUG)
-                    System.out.println("getfield " + klass + "." + field);
+                if (constPoolIndex == ci.u16bitAt(index+7)) {
 
-                int delta = 0;
-                int iconst = ci.byteAt(index+4);
-                switch (iconst) {
-                case Opcode.ICONST_0: delta = 0; break;
-                case Opcode.ICONST_1: delta = 1; break;
-                case Opcode.ICONST_2: delta = 2; break;
-                case Opcode.ICONST_3: delta = 3; break;
-                case Opcode.ICONST_4: delta = 4; break;
-                case Opcode.ICONST_5: delta = 5; break;
-                case Opcode.ICONST_M1: delta = -1; break;
-                default: throw new Error("Unknown instruction: " + iconst);
+                    if (RewriterClassLoader.DEBUG)
+                        System.out.println("getfield " + klass + "." + field);
+
+                    int delta = 0;
+                    int iconst = ci.byteAt(index+4);
+                    switch (iconst) {
+                    case Opcode.ICONST_0: delta = 0; break;
+                    case Opcode.ICONST_1: delta = 1; break;
+                    case Opcode.ICONST_2: delta = 2; break;
+                    case Opcode.ICONST_3: delta = 3; break;
+                    case Opcode.ICONST_4: delta = 4; break;
+                    case Opcode.ICONST_5: delta = 5; break;
+                    case Opcode.ICONST_M1: delta = -1; break;
+                    default: throw new Error("Unknown instruction: " + iconst);
+                    }
+
+                    // $theUnsafe
+                    int unsafeIndex = constPool.addFieldrefInfo(
+                        constPool.addClassInfo(classFile.getName()),
+                        "$theUnsafe",
+                        Descriptor.of("sun.misc.Unsafe"));
+                    // offset$field
+                    int offsetIndex = constPool.addFieldrefInfo(
+                        constPool.getFieldrefClass(constPoolIndex),
+                        "offset$" + field,
+                        Descriptor.of("long"));
+                    // $theUnsafe.getAndAddInt(Object o, long offset, int delta)
+                    int atomicAddIndex = constPool.addMethodrefInfo(
+                        constPool.addClassInfo("sun.misc.Unsafe"),
+                        "getAndAddInt",
+                        "(Ljava/lang/Object;JI)I");
+
+                    // top of stack: obj
+                    ci.writeByte(Opcode.NOP, index);
+                    // top of stack: obj
+                    ci.writeByte(Opcode.GETSTATIC, index+1);
+                    ci.write16bit(unsafeIndex, index+2);
+                    // top of stack: unsafe obj
+                    ci.writeByte(Opcode.SWAP, index+4);
+                    // top of stack: obj unsafe
+                    ci.writeByte(Opcode.GETSTATIC, index+5);
+                    ci.write16bit(offsetIndex, index+6);
+                    // top of stack: offset obj unsafe
+                    ci.writeByte(iconst, index+8);
+                    // top of stack: delta offset obj unsafe
+                    // $theUnsafe.getAndAddInt(obj, offset$field, delta)
+                    ci.insertAt(index+9, new byte[] {
+                            (byte)Opcode.INVOKEVIRTUAL,
+                            (byte)(atomicAddIndex & 0xFF00),
+                            (byte)(atomicAddIndex & 0x00FF),
+                            // top of stack: val
+                            (byte)Opcode.POP});
+
                 }
-
-                // $theUnsafe
-                int unsafeIndex = constPool.addFieldrefInfo(
-                    constPool.addClassInfo(classFile.getName()),
-                    "$theUnsafe",
-                    Descriptor.of("sun.misc.Unsafe"));
-                // offset$field
-                int offsetIndex = constPool.addFieldrefInfo(
-                    constPool.getFieldrefClass(constPoolIndex),
-                    "offset$" + field,
-                    Descriptor.of("long"));
-                // $theUnsafe.getAndAddInt(Object o, long offset, int delta)
-                int atomicAddIndex = constPool.addMethodrefInfo(
-                    constPool.addClassInfo("sun.misc.Unsafe"),
-                    "getAndAddInt",
-                    "(Ljava/lang/Object;JI)I");
-
-                // top of stack: obj
-                ci.writeByte(Opcode.NOP, index);
-                // top of stack: obj
-                ci.writeByte(Opcode.GETSTATIC, index+1);
-                ci.write16bit(unsafeIndex, index+2);
-                // top of stack: unsafe obj
-                ci.writeByte(Opcode.SWAP, index+4);
-                // top of stack: obj unsafe
-                ci.writeByte(Opcode.GETSTATIC, index+5);
-                ci.write16bit(offsetIndex, index+6);
-                // top of stack: offset obj unsafe
-                ci.writeByte(iconst, index+8);
-                // top of stack: delta offset obj unsafe
-                // $theUnsafe.getAndAddInt(obj, offset$field, delta)
-                ci.insertAt(index+9, new byte[] {
-                        (byte)Opcode.INVOKEVIRTUAL,
-                        (byte)(atomicAddIndex & 0xFF00),
-                        (byte)(atomicAddIndex & 0x00FF),
-                        // top of stack: val
-                        (byte)Opcode.POP});
 
                 index = getNextSequence(ci, INCREMENT);
             }
