@@ -228,40 +228,42 @@ public class IncrementRewriter extends Rewriter {
         // $theUnsafe.getAndAddLong
     }
 
-    private int getNextSequence(CodeIterator ci, Matcher[] seqMatcher)
+    private int getNextSequence(CodeIterator ci, Matcher[] matchers)
         throws BadBytecode {
 
         int index = -1;
-        int beginIndex = -1;    // begin index of the matched sequence
+        int beginIndex = -1;    // begin index of the matched sequence,
+                                // indexing into ci (ci.byteAt(beginIndex))
 
-        boolean next = true;
-        List<Integer> matched = new ArrayList<>();
-        int toMatchSeq = 0;     // index into matched
-        int matcherIdx = 0;     // index into seqMatcher
+        List<Integer> matchedSeq = new LinkedList<>();
+        int toMatchIdx = 0;     // indexing into matchedSeq
+        int matcherIdx = 0;     // indexing into matchers
         while (true) {
-            if (toMatchSeq == seqMatcher.length)
+            if (matcherIdx == matchers.length)
                 return beginIndex;
 
-            if (next) {
+            if (matchedSeq.size() <= toMatchIdx) {
                 if (!ci.hasNext())
                     return -1;
                 index = ci.next();
+                matchedSeq.add(ci.byteAt(index));
             }
 
-            matched.add(ci.byteAt(index));
-            if (seqMatcher[toMatchSeq].match(matched, toMatchSeq) == -1) {
+            toMatchIdx = matchers[matcherIdx].match(matchedSeq, toMatchIdx);
+            if (toMatchIdx == -1) {
                 beginIndex = -1;
-                next = (toMatchSeq == 0);
-                // TODO: nontrivial partial match index (like KMP)
-                toMatchSeq = 0;
-                matched.subList(toMatchSeq, matched.size()).clear();
+
+                // clear states
+                matcherIdx = 0;
+                toMatchIdx = 0;
+                matchedSeq.remove(0); // right shift by 1
+
                 continue;
             }
 
-            if (toMatchSeq == 0)
+            if (matcherIdx == 0)
                 beginIndex = index;
-            toMatchSeq++;
-            next = true;
+            matcherIdx++;
         }
     }
 }
