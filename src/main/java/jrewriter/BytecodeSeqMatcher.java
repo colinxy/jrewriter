@@ -5,7 +5,7 @@ import java.util.stream.*;
 
 
 /**
- * API for matching sequence of bytecode
+ * API (DSL) for matching sequence of bytecode
  * Supports:
  *   Any
  *   Exactly
@@ -50,6 +50,8 @@ public class BytecodeSeqMatcher {
     /**
      * Factory functions
      */
+    public static Matcher Skip = new Skip();
+
     public static Matcher Any = new Any();
 
     public static Matcher Exactly(int match) {
@@ -83,8 +85,24 @@ public class BytecodeSeqMatcher {
      * Matcher classes
      */
     abstract public static class Matcher {
+        /** test whether current bytecode matches */
         abstract boolean match(int bytecode);
-        abstract boolean match(List<Integer> matchedSeq, int toMatchSeq);
+        /**
+         * test whether matchedSeq.get(toMatchSeq) matches;
+         * if matches, return position in matchedSeq to match next;
+         * otherwise, return -1
+         */
+        abstract int match(List<Integer> matchedSeq, int toMatchSeq);
+    }
+
+    public static class Skip extends Matcher {
+        boolean match(int bytecode) {
+            return true;
+        }
+
+        int match(List<Integer> matchedSeq, int toMatchSeq) {
+            return toMatchSeq;
+        }
     }
 
     public static class Any extends Matcher {
@@ -92,8 +110,8 @@ public class BytecodeSeqMatcher {
             return true;
         }
 
-        boolean match(List<Integer> matchedSeq, int toMatchSeq) {
-            return true;
+        int match(List<Integer> matchedSeq, int toMatchSeq) {
+            return toMatchSeq+1;
         }
     }
 
@@ -108,8 +126,10 @@ public class BytecodeSeqMatcher {
             return match == bytecode;
         }
 
-        boolean match(List<Integer> matchedSeq, int toMatchSeq) {
-            return match(matchedSeq.get(toMatchSeq));
+        int match(List<Integer> matchedSeq, int toMatchSeq) {
+            if (match(matchedSeq.get(toMatchSeq)))
+                return toMatchSeq+1;
+            return -1;
         }
     }
 
@@ -124,9 +144,14 @@ public class BytecodeSeqMatcher {
             return Arrays.stream(matchers).anyMatch(m -> m.match(bytecode));
         }
 
-        boolean match(List<Integer> matchedSeq, int toMatchSeq) {
-            return Arrays.stream(matchers)
-                .anyMatch(m -> m.match(matchedSeq, toMatchSeq));
+        int match(List<Integer> matchedSeq, int toMatchSeq) {
+            for (Matcher m : matchers) {
+                int toMatchSeqNext = m.match(matchedSeq, toMatchSeq);
+                if (toMatchSeqNext != -1) {
+                    return toMatchSeqNext;
+                }
+            }
+            return -1;
         }
     }
 
@@ -154,20 +179,15 @@ public class BytecodeSeqMatcher {
                 "Use boolean match(List<Integer>, int) instead");
         }
 
-        /**
-         * Return true if <code>matchBefore</code> matches
-         * <code>matched[current-posBefore]</code>, and
-         * <code>matchCurrent</code> matches
-         * <code>matched[current]</code>
-         *
-         * As a result, <code>matchBefore</code> and
-         * <code>matchCurrent</code> cannot be Pair
-         */
-        boolean match(List<Integer> matchedSeq, int toMatchSeq) {
+        int match(List<Integer> matchedSeq, int toMatchSeq) {
             int bytecode = matchedSeq.get(toMatchSeq),
                 bytecodeBefore = matchedSeq.get(toMatchSeq-posBefore);
-            return matchBefore.match(bytecodeBefore)
-                && matchCurrent.match(bytecode);
+            if (matchBefore.match(matchedSeq, toMatchSeq-posBefore) != -1) {
+                int toMatchSeqNext = matchCurrent.match(matchedSeq, toMatchSeq);
+                if (toMatchSeqNext != -1)
+                    return toMatchSeqNext;
+            }
+            return -1;
         }
     }
 }

@@ -14,16 +14,6 @@ import static jrewriter.BytecodeSeqMatcher.Pairs;
 
 public class IncrementRewriter extends Rewriter {
     // sequence of bytecode that does increment
-    final int[] INCREMENT = {
-        Opcode.DUP,
-        Opcode.GETFIELD,
-        // TODO: also ICONST family, (ILOAD family)
-        Opcode.ICONST_1,
-        // TODO: also ISUB
-        Opcode.IADD,
-        Opcode.PUTFIELD,
-    };
-
     // TODO: support GETSTATIC/PUTSTATIC
     final Matcher[] incrementMatcher = {
         Exactly(Opcode.DUP),
@@ -245,8 +235,9 @@ public class IncrementRewriter extends Rewriter {
         int beginIndex = -1;    // begin index of the matched sequence
 
         boolean next = true;
-        int toMatchSeq = 0;
         List<Integer> matched = new ArrayList<>();
+        int toMatchSeq = 0;     // index into matched
+        int matcherIdx = 0;     // index into seqMatcher
         while (true) {
             if (toMatchSeq == seqMatcher.length)
                 return beginIndex;
@@ -258,7 +249,7 @@ public class IncrementRewriter extends Rewriter {
             }
 
             matched.add(ci.byteAt(index));
-            if (!seqMatcher[toMatchSeq].match(matched, toMatchSeq)) {
+            if (seqMatcher[toMatchSeq].match(matched, toMatchSeq) == -1) {
                 beginIndex = -1;
                 next = (toMatchSeq == 0);
                 // TODO: nontrivial partial match index (like KMP)
@@ -272,60 +263,5 @@ public class IncrementRewriter extends Rewriter {
             toMatchSeq++;
             next = true;
         }
-    }
-
-
-    /**
-     * Simpler API, unused
-     */
-
-    // // sequence of bytecode that does increment
-    // final int[] _INCREMENT = {
-    //     Opcode.DUP,
-    //     Opcode.GETFIELD,
-    //     // also ICONST family, (ILOAD family)
-    //     Opcode.ICONST_1,
-    //     // also ISUB
-    //     Opcode.IADD,
-    //     Opcode.PUTFIELD,
-    // };
-
-    /**
-     * Return -1 if got to the end of CodeIterator
-     *
-     * Invoke as getNextSequence(ci, _INCREMENT)
-     */
-    private int getNextSequence(CodeIterator ci, int[] seq) throws BadBytecode {
-        int index = -1;
-        int beginIndex = -1;    // begin index of the matched sequence
-
-        boolean next = true;
-        int toMatch = 0;
-        while (true) {
-            // found a match!
-            if (toMatch == seq.length)
-                return beginIndex;
-
-            if (next) {
-                if (!ci.hasNext())
-                    return -1;
-                index = ci.next();
-            }
-
-            if (ci.byteAt(index) != seq[toMatch]) {
-                beginIndex = -1;
-                next = (toMatch == 0);
-                // TODO: this assume there is no duplicate in seq
-                toMatch = 0;
-                continue;
-            }
-
-            if (toMatch == 0) {
-                beginIndex = index;
-            }
-            toMatch++;
-            next = true;
-        }
-        // throw new RuntimeException("getNextSequence bug");
     }
 }
