@@ -17,38 +17,13 @@ import java.util.stream.*;
 
 public class BytecodeSeqMatcher {
 
-    // Matcher[] matchers;
-    // List<Integer> matched;
-    // int pos;
-
-    // public BytecodeSeqMatcher(Matcher... matchers) {
-    //     this.matchers = matchers;
-    //     matched = new ArrayList<>();
-    //     pos = 0;
-    // }
-
-    // public boolean match(int bytecode) {
-    //     matched.add(bytecode);
-    //     pos++;
-
-    //     boolean match = matchers[pos-1].match(matched, pos-1);
-    //     if (!match) {
-    //         // TODO: use KMP partial match table
-    //         // current assume there is no duplicate in m
-    //         pos = 0;
-    //         matched.subList(pos, matched.size()).clear();
-    //     }
-
-    //     return match;
-    // }
-
-    // public boolean fullmatch(int bytecode) {
-    //     return pos == matchers.length;
-    // }
-
-
     /**
      * Factory functions
+     *
+     * use with
+     * import static jrewriter.BytecodeSeqMatcher.Matcher;
+     * import static jrewriter.BytecodeSeqMatcher.Skip;
+     * ...
      */
     public static Matcher Skip = new Skip();
 
@@ -62,6 +37,10 @@ public class BytecodeSeqMatcher {
         return new Or(Arrays.stream(matchers)
                          .mapToObj(m -> new Exactly(m))
                          .toArray(Matcher[]::new));
+    }
+
+    public static Matcher Or(Matcher... matchers) {
+        return new Or(matchers);
     }
 
     public static Matcher Pair(int posBefore, int matchBefore, int matchAfter) {
@@ -83,6 +62,8 @@ public class BytecodeSeqMatcher {
 
     /**
      * Matcher classes
+     *
+     * do not use directly
      */
     abstract public static class Matcher {
         /** test whether current bytecode matches */

@@ -6,16 +6,18 @@ import javassist.*;
 import javassist.bytecode.*;
 import javassist.expr.*;
 
-import static jrewriter.BytecodeSeqMatcher.Matcher;
 import static jrewriter.BytecodeSeqMatcher.Exactly;
+import static jrewriter.BytecodeSeqMatcher.Matcher;
 import static jrewriter.BytecodeSeqMatcher.Or;
 import static jrewriter.BytecodeSeqMatcher.Pairs;
+import static jrewriter.BytecodeSeqMatcher.Skip;
 
 
 public class IncrementRewriter extends Rewriter {
     // sequence of bytecode that does increment
     // TODO: support GETSTATIC/PUTSTATIC
     final Matcher[] incrementMatcher = {
+        // Or(Exactly(Opcode.DUP), Skip),
         Exactly(Opcode.DUP),
         Or(Opcode.GETFIELD, Opcode.GETSTATIC),
         Or(Opcode.ICONST_0, Opcode.ICONST_1,
@@ -159,8 +161,12 @@ public class IncrementRewriter extends Rewriter {
 
                 if (constPoolIndex == ci.u16bitAt(getIndex+6)) {
 
-                    if (RewriterClassLoader.DEBUG)
-                        System.out.println("GETFIELD " + klass + "." + field);
+                    if (RewriterClassLoader.DEBUG) {
+                        String code = ci.byteAt(getIndex) == Opcode.GETFIELD
+                            ? "GETFIELD "
+                            : "GETSTATIC ";
+                        System.out.println(code + klass + "." + field);
+                    }
 
                     int iconst = ci.byteAt(getIndex+3);
                     int delta = 0;
