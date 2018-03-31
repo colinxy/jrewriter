@@ -24,7 +24,7 @@ public class IncrementRewriter extends Rewriter {
         Opcode.PUTFIELD,
     };
 
-    // TODO: GETSTATIC/PUTSTATIC not supported yet
+    // TODO: support GETSTATIC/PUTSTATIC
     final Matcher[] incrementMatcher = {
         Exactly(Opcode.DUP),
         Or(Opcode.GETFIELD, Opcode.GETSTATIC),
@@ -201,6 +201,7 @@ public class IncrementRewriter extends Rewriter {
                         "getAndAddInt",
                         "(Ljava/lang/Object;JI)I");
 
+                    // TODO: support GETSTATIC/PUTSTATIC
                     // top of stack: obj
                     ci.writeByte(Opcode.NOP, index);
                     // top of stack: obj

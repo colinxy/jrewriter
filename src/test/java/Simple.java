@@ -22,6 +22,14 @@ public class Simple {
         return x;
     }
 
+    public int incResult() {
+        // TODO: support increment result
+        int postfix = field++;
+        int prefix = ++field;
+        System.out.println("postfix++: " + postfix + "; prefix++: " + prefix);
+        return prefix - postfix;
+    }
+
     public static int refOther1() {
         Simple s = new Simple();
         int x = s.field;
