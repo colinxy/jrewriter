@@ -12,21 +12,23 @@ public class Simple {
         immutable = 100;
     }
 
-    public int refSelf() {
-        int x = field;
-        field++;
-        field += 1;
-        field += -1;
-        field--;
-        System.out.println("before: " + x + "; after: " + field);
-        return x;
+    public static int refSelf() {
+        Simple s = new Simple();
+        int x = s.field;
+        s.field++;
+        s.field += 1;
+        s.field += -1;
+        s.field--;
+        System.out.println("before: " + x + "; after: " + s.field);
+        return s.field;
     }
 
-    public int incResult() {
+    public static int incResult() {
+        Simple s = new Simple();
         // TODO: support increment result
-        int postfix = field++;
-        int prefix = ++field;
-        System.out.println("postfix++: " + postfix + "; prefix++: " + prefix);
+        int postfix = s.field++;
+        int prefix = ++s.field;
+        System.out.println("field++: " + postfix + "; ++field: " + prefix);
         return prefix - postfix;
     }
 
@@ -35,7 +37,7 @@ public class Simple {
         int x = s.field;
         s.field++;
         System.out.println("before: " + x + "; after: " + s.field);
-        return x;
+        return s.field;
     }
 
     public static int refOther2() {
@@ -43,14 +45,14 @@ public class Simple {
         int x = h.fieldOfHolder;
         h.fieldOfHolder++;
         System.out.println("before: " + x + "; after: " + h.fieldOfHolder);
-        return x;
+        return h.fieldOfHolder;
     }
 
     public static int refStatic() {
         int x = staticField;
         staticField++;
         System.out.println("before: " + x + "; after: " + staticField);
-        return x;
+        return staticField;
     }
 
     public static int notIncrement1() {

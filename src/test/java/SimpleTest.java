@@ -1,54 +1,60 @@
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.*;
 import jrewriter.RewriterClassLoader;
 import org.junit.Test;
 import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+
+import static org.junit.Assert.assertEquals;
 
 
+@RunWith(Parameterized.class)
 public class SimpleTest {
-    RewriterClassLoader loader;
+    static RewriterClassLoader loader;
+    Class<?> simple;
 
-    @Before()
-    public void setUp() {
+    private String methodName;
+    private int result;
+
+    public SimpleTest(String methodName, int result) {
+        this.methodName = methodName;
+        this.result = result;
+    }
+
+    @BeforeClass()
+    public static void classLoader() {
         loader = new RewriterClassLoader(SimpleTest.class.getClassLoader());
     }
 
-    @Test()
-    public void test()
-        throws ClassNotFoundException
-        , InstantiationException
-        , IllegalAccessException
-        , NoSuchMethodException
-        , InvocationTargetException {
-
-        Class<?> simple = loader.loadClass("Simple");
-        Object instance;
-        try {
-            instance = simple.newInstance();
-        } catch (Error err) {
-            err.printStackTrace();
-            throw new Error(err);
-        }
-
-        System.out.println("\n--> Test output");
-
-        int x1 = (Integer) simple.getMethod("refSelf").invoke(instance);
-        System.out.println("refSelf: " + x1);
-
-        int x2 = (Integer) simple.getMethod("refOther1").invoke(null);
-        System.out.println("refOther1: " + x2);
-
-        int x3 = (Integer) simple.getMethod("refOther2").invoke(null);
-        System.out.println("refOther2: " + x3);
-
-        int x4 = (Integer) simple.getMethod("refStatic").invoke(null);
-        System.out.println("refStatic: " + x4);
-
-        int x5 = (Integer) simple.getMethod("notIncrement1").invoke(null);
-        System.out.println("notIncrement1: " + x5);
-
-        int x6 = (Integer) simple.getMethod("notIncrement2").invoke(null);
-        System.out.println("notIncrement2: " + x6);
+    @Before
+    public void loadClass() throws ClassNotFoundException {
+        simple = loader.loadClass("Simple");
     }
 
+    @Test
+    public void checkResult()
+        throws NoSuchMethodException
+        , IllegalAccessException
+        , InvocationTargetException {
+        int res = (Integer) simple.getMethod(methodName).invoke(null);
+        assertEquals(result, res);
+        System.out.println(methodName + ": " + res);
+    }
+
+    @Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] {
+                {"refSelf", 0},
+                {"incResult", 2},
+                {"refOther1", 1},
+                {"refOther2", 1},
+                {"refStatic", 101},
+                {"notIncrement1", 1},
+                {"notIncrement2", 1}
+            });
+    }
 }
