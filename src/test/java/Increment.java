@@ -12,6 +12,10 @@ public class Increment {
     public static Increment obj = new Increment();
 
     public static void main(String[] args) {
+        System.out.println(doit());
+    }
+
+    public static int doit() {
         MyThread t1 = new MyThread();
         MyThread t2 = new MyThread();
         t1.start();
@@ -20,6 +24,6 @@ public class Increment {
             t1.join();
             t2.join();
         } catch(InterruptedException e) {}
-        System.out.println(obj.x);
+        return obj.x;
     }
 }

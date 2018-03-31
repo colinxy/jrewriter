@@ -1,6 +1,7 @@
 
 public class Simple {
     int field = 0;
+    int anotherField = 123;
     static int staticField = 100;
     final int immutable;
 
@@ -42,5 +43,22 @@ public class Simple {
         staticField++;
         System.out.println("before: " + x + "; after: " + staticField);
         return x;
+    }
+
+    public static int notIncrement1() {
+        Simple s = new Simple();
+        s.anotherField = s.field + 1;
+        System.out.println("anotherField: " + s.anotherField +
+                           "; field: " + s.field);
+        return s.anotherField;
+    }
+
+    public static int notIncrement2() {
+        Simple s1 = new Simple();
+        Simple s2 = new Simple();
+        s2.field = s1.field + 1;
+        System.out.println("s1.field: " + s1.field +
+                           "; s2.field: " + s2.field);
+        return s2.field;
     }
 }

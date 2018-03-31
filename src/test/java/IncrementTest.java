@@ -4,6 +4,8 @@ import jrewriter.RewriterClassLoader;
 import org.junit.Test;
 import org.junit.Before;
 
+import static org.junit.Assert.assertEquals;
+
 
 public class IncrementTest {
     RewriterClassLoader loader;
@@ -22,6 +24,7 @@ public class IncrementTest {
         , NoSuchMethodException {
 
         Class<?> increment = loader.loadClass("Increment");
-        increment.getMethod("main", String[].class).invoke(null, (Object)null);
+        assertEquals(increment.getMethod("doit").invoke(null),
+                     2000000);
     }
 }

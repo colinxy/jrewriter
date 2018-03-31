@@ -43,6 +43,12 @@ public class SimpleTest {
 
         int x4 = (Integer) simple.getMethod("refStatic").invoke(null);
         System.out.println("refStatic: " + x4);
+
+        int x5 = (Integer) simple.getMethod("notIncrement1").invoke(null);
+        System.out.println("notIncrement1: " + x5);
+
+        int x6 = (Integer) simple.getMethod("notIncrement2").invoke(null);
+        System.out.println("notIncrement2: " + x6);
     }
 
 }
