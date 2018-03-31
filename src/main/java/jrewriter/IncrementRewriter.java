@@ -6,6 +6,11 @@ import javassist.*;
 import javassist.bytecode.*;
 import javassist.expr.*;
 
+import static jrewriter.BytecodeSeqMatcher.Matcher;
+import static jrewriter.BytecodeSeqMatcher.Exactly;
+import static jrewriter.BytecodeSeqMatcher.Or;
+import static jrewriter.BytecodeSeqMatcher.Pairs;
+
 
 public class IncrementRewriter extends Rewriter {
     // sequence of bytecode that does increment
@@ -18,6 +23,19 @@ public class IncrementRewriter extends Rewriter {
         Opcode.IADD,
         Opcode.PUTFIELD,
     };
+
+    // TODO: GETSTATIC/PUTSTATIC not supported yet
+    final Matcher[] incrementMatcher = {
+        Exactly(Opcode.DUP),
+        Or(Opcode.GETFIELD, Opcode.GETSTATIC),
+        Or(Opcode.ICONST_0, Opcode.ICONST_1,
+           Opcode.ICONST_2, Opcode.ICONST_3,
+           Opcode.ICONST_4, Opcode.ICONST_5, Opcode.ICONST_M1),
+        Exactly(Opcode.IADD),
+        Pairs(3, Opcode.GETFIELD,  Opcode.PUTFIELD,
+              3, Opcode.GETSTATIC, Opcode.PUTSTATIC)
+    };
+
 
     public IncrementRewriter(ClassPool pool, CtClass cc) {
         super(pool, cc);
@@ -118,30 +136,44 @@ public class IncrementRewriter extends Rewriter {
             CodeAttribute ca = minfo.getCodeAttribute();
             CodeIterator ci = ca.iterator();
 
-            int index = getNextSequence(ci, INCREMENT);
+            int index = getNextSequence(ci, incrementMatcher);
             while (index > 0) {
                 // TODO: ILOAD works as well as ICONST, but with argument
 
+                // getfield/putfield
                 // BEG index+0
                 // index+0: DUP
-                // index+1: GETFIELD
+                // index+1: GETFIELD   <-- getIndex
                 // index+2: <index>
                 // index+4: ICONST
                 // index+5: IADD
-                // index+6: PUTFIELD
+                // index+6: PUTFIELD   <-- getIndex+5
                 // index+7: <index>
                 // END index+9
-                final int constPoolIndex = ci.u16bitAt(index+2);
+
+                // getstatic/putstatic
+                // BEG index+0
+                // index+0: GETSTATIC  <-- getIndex
+                // index+1: <index>
+                // index+3: ICONST
+                // index+4: IADD
+                // index+5: PUTSTATIC  <-- getIndex+5
+                // index+6: <index>
+                // END index+8
+
+                final boolean isStatic = ci.byteAt(index) != Opcode.DUP;
+                final int getIndex = isStatic ? index : index+1;
+                final int constPoolIndex = ci.u16bitAt(getIndex+1);
                 String field = constPool.getFieldrefName(constPoolIndex);
                 String klass = constPool.getFieldrefClassName(constPoolIndex);
 
-                if (constPoolIndex == ci.u16bitAt(index+7)) {
+                if (constPoolIndex == ci.u16bitAt(getIndex+6)) {
 
                     if (RewriterClassLoader.DEBUG)
-                        System.out.println("getfield " + klass + "." + field);
+                        System.out.println("GETFIELD " + klass + "." + field);
 
+                    int iconst = ci.byteAt(getIndex+3);
                     int delta = 0;
-                    int iconst = ci.byteAt(index+4);
                     switch (iconst) {
                     case Opcode.ICONST_0: delta = 0; break;
                     case Opcode.ICONST_1: delta = 1; break;
@@ -192,7 +224,7 @@ public class IncrementRewriter extends Rewriter {
 
                 }
 
-                index = getNextSequence(ci, INCREMENT);
+                index = getNextSequence(ci, incrementMatcher);
             }
 
             // $theUnsafe.getAndAddInt need max_stack >= 5
@@ -205,8 +237,62 @@ public class IncrementRewriter extends Rewriter {
         // $theUnsafe.getAndAddLong
     }
 
+    private int getNextSequence(CodeIterator ci, Matcher[] seqMatcher)
+        throws BadBytecode {
+
+        int index = -1;
+        int beginIndex = -1;    // begin index of the matched sequence
+
+        boolean next = true;
+        int toMatchSeq = 0;
+        List<Integer> matched = new ArrayList<>();
+        while (true) {
+            if (toMatchSeq == seqMatcher.length)
+                return beginIndex;
+
+            if (next) {
+                if (!ci.hasNext())
+                    return -1;
+                index = ci.next();
+            }
+
+            matched.add(ci.byteAt(index));
+            if (!seqMatcher[toMatchSeq].match(matched, toMatchSeq)) {
+                beginIndex = -1;
+                next = (toMatchSeq == 0);
+                // TODO: nontrivial partial match index (like KMP)
+                toMatchSeq = 0;
+                matched.subList(toMatchSeq, matched.size()).clear();
+                continue;
+            }
+
+            if (toMatchSeq == 0)
+                beginIndex = index;
+            toMatchSeq++;
+            next = true;
+        }
+    }
+
+
     /**
-     * returns -1 if got to the end of CodeIterator
+     * Simpler API, unused
+     */
+
+    // // sequence of bytecode that does increment
+    // final int[] _INCREMENT = {
+    //     Opcode.DUP,
+    //     Opcode.GETFIELD,
+    //     // also ICONST family, (ILOAD family)
+    //     Opcode.ICONST_1,
+    //     // also ISUB
+    //     Opcode.IADD,
+    //     Opcode.PUTFIELD,
+    // };
+
+    /**
+     * Return -1 if got to the end of CodeIterator
+     *
+     * Invoke as getNextSequence(ci, _INCREMENT)
      */
     private int getNextSequence(CodeIterator ci, int[] seq) throws BadBytecode {
         int index = -1;

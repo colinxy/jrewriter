@@ -52,7 +52,7 @@ public class GetSetRewriter extends Rewriter {
                             String klass = f.getClassName();
                             String field = f.getFieldName();
                             if (RewriterClassLoader.DEBUG)
-                                System.out.println("getfield "
+                                System.out.println("GETFIELD "
                                                    + klass + "." + field);
 
                             // TODO: this will generate a invokevirtual
@@ -66,7 +66,7 @@ public class GetSetRewriter extends Rewriter {
                             String klass = f.getClassName();
                             String field = f.getFieldName();
                             if (RewriterClassLoader.DEBUG)
-                                System.out.println("putfield "
+                                System.out.println("PUTFIELD "
                                                    + klass + "." + field);
 
                             // TODO: same problem as getter
