@@ -15,15 +15,15 @@ import static jrewriter.BytecodeSeqMatcher.Skip;
 
 public class IncrementRewriter extends Rewriter {
     // sequence of bytecode that does increment
-    // TODO: support GETSTATIC/PUTSTATIC
     final Matcher[] incrementMatcher = {
-        // Or(Exactly(Opcode.DUP), Skip),
-        Exactly(Opcode.DUP),
+        Or(Exactly(Opcode.DUP), Skip),
         Or(Opcode.GETFIELD, Opcode.GETSTATIC),
         Or(Opcode.ICONST_0, Opcode.ICONST_1,
            Opcode.ICONST_2, Opcode.ICONST_3,
            Opcode.ICONST_4, Opcode.ICONST_5, Opcode.ICONST_M1),
         Exactly(Opcode.IADD),
+        // matches PUTFIELD if 3 bytecode before is GETFIELD
+        // matches PUTSTATIC if 3 bytecode before is GETSTATIC
         Pairs(3, Opcode.GETFIELD,  Opcode.PUTFIELD,
               3, Opcode.GETSTATIC, Opcode.PUTSTATIC)
     };
@@ -156,10 +156,18 @@ public class IncrementRewriter extends Rewriter {
                 final boolean isStatic = ci.byteAt(index) != Opcode.DUP;
                 final int getIndex = isStatic ? index : index+1;
                 final int constPoolIndex = ci.u16bitAt(getIndex+1);
-                String field = constPool.getFieldrefName(constPoolIndex);
-                String klass = constPool.getFieldrefClassName(constPoolIndex);
+                final String field = constPool.getFieldrefName(constPoolIndex);
+                final String klass = constPool.getFieldrefClassName(constPoolIndex);
 
-                if (constPoolIndex == ci.u16bitAt(getIndex+6)) {
+                boolean validate =
+                    // get/set same field
+                    constPoolIndex == ci.u16bitAt(getIndex+6)
+                    // GETSTATIC or
+                    && (isStatic && ci.byteAt(getIndex) == Opcode.GETSTATIC
+                        // GETFIELD
+                        || !isStatic && ci.byteAt(getIndex) == Opcode.GETFIELD);
+
+                if (validate) {
 
                     if (RewriterClassLoader.DEBUG) {
                         String code = ci.byteAt(getIndex) == Opcode.GETFIELD
@@ -169,18 +177,20 @@ public class IncrementRewriter extends Rewriter {
                     }
 
                     int iconst = ci.byteAt(getIndex+3);
-                    int delta = 0;
-                    switch (iconst) {
-                    case Opcode.ICONST_0: delta = 0; break;
-                    case Opcode.ICONST_1: delta = 1; break;
-                    case Opcode.ICONST_2: delta = 2; break;
-                    case Opcode.ICONST_3: delta = 3; break;
-                    case Opcode.ICONST_4: delta = 4; break;
-                    case Opcode.ICONST_5: delta = 5; break;
-                    case Opcode.ICONST_M1: delta = -1; break;
-                    default: throw new Error("Unknown instruction: " + iconst);
-                    }
+                    // int delta = 0;
+                    // switch (iconst) {
+                    // case Opcode.ICONST_0: delta = 0; break;
+                    // case Opcode.ICONST_1: delta = 1; break;
+                    // case Opcode.ICONST_2: delta = 2; break;
+                    // case Opcode.ICONST_3: delta = 3; break;
+                    // case Opcode.ICONST_4: delta = 4; break;
+                    // case Opcode.ICONST_5: delta = 5; break;
+                    // case Opcode.ICONST_M1: delta = -1; break;
+                    // default: throw new Error("Unknown instruction: " + iconst);
+                    // }
 
+                    // Class (only needed for static field)
+                    int classIndex = constPool.getFieldrefClass(constPoolIndex);
                     // $theUnsafe
                     int unsafeIndex = constPool.addFieldrefInfo(
                         constPool.addClassInfo(classFile.getName()),
@@ -188,7 +198,7 @@ public class IncrementRewriter extends Rewriter {
                         Descriptor.of("sun.misc.Unsafe"));
                     // offset$field
                     int offsetIndex = constPool.addFieldrefInfo(
-                        constPool.getFieldrefClass(constPoolIndex),
+                        classIndex,
                         "offset$" + field,
                         Descriptor.of("long"));
                     // $theUnsafe.getAndAddInt(Object o, long offset, int delta)
@@ -197,27 +207,52 @@ public class IncrementRewriter extends Rewriter {
                         "getAndAddInt",
                         "(Ljava/lang/Object;JI)I");
 
-                    // TODO: support GETSTATIC/PUTSTATIC
-                    // top of stack: obj
-                    ci.writeByte(Opcode.NOP, index);
-                    // top of stack: obj
-                    ci.writeByte(Opcode.GETSTATIC, index+1);
-                    ci.write16bit(unsafeIndex, index+2);
-                    // top of stack: unsafe obj
-                    ci.writeByte(Opcode.SWAP, index+4);
-                    // top of stack: obj unsafe
-                    ci.writeByte(Opcode.GETSTATIC, index+5);
-                    ci.write16bit(offsetIndex, index+6);
-                    // top of stack: offset obj unsafe
-                    ci.writeByte(iconst, index+8);
-                    // top of stack: delta offset obj unsafe
-                    // $theUnsafe.getAndAddInt(obj, offset$field, delta)
-                    ci.insertAt(index+9, new byte[] {
-                            (byte)Opcode.INVOKEVIRTUAL,
-                            (byte)(atomicAddIndex & 0xFF00),
-                            (byte)(atomicAddIndex & 0x00FF),
-                            // top of stack: val
-                            (byte)Opcode.POP});
+                    if (isStatic) {
+                        // 8 bytes for GETSTATIC/PUTSTATIC
+                        // top of stack:
+                        ci.writeByte(Opcode.GETSTATIC, index);
+                        ci.write16bit(unsafeIndex, index+1);
+                        // top of stack: unsafe
+                        ci.writeByte(Opcode.LDC_W, index+3);
+                        ci.write16bit(classIndex, index+4);
+                        // top of stack: Class unsafe
+                        ci.writeByte(Opcode.NOP, index+6);
+                        ci.writeByte(Opcode.NOP, index+7);
+                        ci.insertAt(index+8, new byte[] {
+                                (byte)Opcode.GETSTATIC,
+                                (byte)(offsetIndex & 0xFF00),
+                                (byte)(offsetIndex & 0x00FF),
+                                // top of stack: offset Class unsafe
+                                (byte)iconst,
+                                // top of stack: delta offset Class unsafe
+                                // $theUnsafe.getAndAddInt(Class.class, offset$field, delta)
+                                (byte)Opcode.INVOKEVIRTUAL,
+                                (byte)(atomicAddIndex & 0xFF00),
+                                (byte)(atomicAddIndex & 0x00FF),
+                                // top of stack: val
+                                (byte)Opcode.POP});
+                    } else {
+                        // 9 bytes for GETFIELD/PUTFIELD
+                        ci.writeByte(Opcode.NOP, index);
+                        // top of stack: obj
+                        ci.writeByte(Opcode.GETSTATIC, index+1);
+                        ci.write16bit(unsafeIndex, index+2);
+                        // top of stack: unsafe obj
+                        ci.writeByte(Opcode.SWAP, index+4);
+                        // top of stack: obj unsafe
+                        ci.writeByte(Opcode.GETSTATIC, index+5);
+                        ci.write16bit(offsetIndex, index+6);
+                        // top of stack: offset obj unsafe
+                        ci.writeByte(iconst, index+8);
+                        // top of stack: delta offset obj unsafe
+                        // $theUnsafe.getAndAddInt(obj, offset$field, delta)
+                        ci.insertAt(index+9, new byte[] {
+                                (byte)Opcode.INVOKEVIRTUAL,
+                                (byte)(atomicAddIndex & 0xFF00),
+                                (byte)(atomicAddIndex & 0x00FF),
+                                // top of stack: val
+                                (byte)Opcode.POP});
+                    }
 
                 }
 
@@ -228,8 +263,6 @@ public class IncrementRewriter extends Rewriter {
             ca.computeMaxStack();
         }
 
-        // TODO: static fields use getstatic/putstatic
-        // static: $theUnsafe.getAndAddInt(Type.class, offset$field, delta)
         // TODO: long
         // $theUnsafe.getAndAddLong
     }
