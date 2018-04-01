@@ -3,37 +3,37 @@ import java.lang.reflect.*;
 import jrewriter.RewriterClassLoader;
 import org.junit.Test;
 import org.junit.Before;
+import org.junit.BeforeClass;
 
 
 public class InheritTest {
-    RewriterClassLoader loader;
+    static RewriterClassLoader loader;
+    Class<?> childClass;
+    Class<?> parentClass;
+    Object childInstance;
+    Object parentInstance;
 
-    @Before()
-    public void setUp() {
-        loader = new RewriterClassLoader(SimpleTest.class.getClassLoader());
+    @BeforeClass
+    public static void classLoader() {
+        loader = new RewriterClassLoader(InheritTest.class.getClassLoader());
     }
 
-    @Test()
-    public void test()
+    @Before
+    public void loadClass()
         throws ClassNotFoundException
         , InstantiationException
-        , IllegalAccessException
-        , NoSuchFieldException {
+        , IllegalAccessException {
 
-        // make sure Child and Parent are already loaded
-        Class<?> childClass = loader.loadClass("Child");
-        Class<?> parentClass = loader.loadClass("Parent");
-        Object childInstance;
-        Object _parentInstance;
-        try {
-            childInstance = childClass.newInstance();
-            _parentInstance = parentClass.newInstance();
-        } catch (Error err) {
-            err.printStackTrace();
-            throw new Error(err);
-        }
+        childClass = loader.loadClass("Child");
+        parentClass = loader.loadClass("Parent");
+        childInstance = childClass.newInstance();
+        parentInstance = parentClass.newInstance();
+    }
 
-        System.out.println("\n--> Test output");
+    @Test
+    public void test()
+        throws NoSuchFieldException
+        , IllegalAccessException {
 
         Field childField = childClass.getDeclaredField("childField");
         Field parentField = parentClass.getDeclaredField("parentField");

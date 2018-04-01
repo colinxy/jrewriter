@@ -25,7 +25,7 @@ public class SimpleTest {
         this.result = result;
     }
 
-    @BeforeClass()
+    @BeforeClass
     public static void classLoader() {
         loader = new RewriterClassLoader(SimpleTest.class.getClassLoader());
     }
