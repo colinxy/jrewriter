@@ -8,6 +8,8 @@ Not developed. See [README-getset.md](README-getset.md)
 
 ## `IncrementRewriter`
 
+*Java 8 required*
+
 Rewrite increment on `int` or `long` to be atomic using `getAndAddInt`
 and `getAndAddLong` methods in `sun.misc.Unsafe`. As a result,
 unsynchronized update on counters is made atomic.

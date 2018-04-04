@@ -51,3 +51,31 @@ test {
         events "passed", "skipped", "failed", "standardOut", "standardError"
     }
 }
+
+task dacapo(type: JavaExec, dependsOn: build) {
+    // run as (pass -PnoRewrite to disable jrewriter.RewriterClassLoader)
+    // $ gradle dacapo -PtestName=avrora
+    // equivalent java command
+    // $ java -Djava.system.class.loader=jrewriter.RewriterClassLoader -cp build/libs/jrewriter-0.1.0.jar:bench/dacapo-9.12-MR1-bach.jar Harness avrora
+
+    def dacapoJar = "bench/dacapo-9.12-MR1-bach.jar"
+    doFirst {
+        assert file(dacapoJar).exists() : \
+        "Download DaCapo jar from http://dacapobench.org/, and place it under bench/"
+        println commandLine.join(" ")
+        println ""
+    }
+
+    main = "Harness";
+    classpath = files(jar.archivePath, dacapoJar);
+    if (!project.hasProperty("noRewrite")) {
+        systemProperty "java.system.class.loader", "jrewriter.RewriterClassLoader";
+    }
+    if (project.hasProperty("testName")) {
+        args testName.split(",")
+    }
+}
+
+def dacapoTests = ["avrora", "batik", "eclipse", "fop", "h2",
+                   "jython", "luindex", "lusearch", "pmd", "sunflow",
+                   "tomcat", "tradebeans", "tradesoap", "xalan"]
