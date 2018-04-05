@@ -2,6 +2,7 @@ package jrewriter;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.*;
 import javassist.*;
 import javassist.bytecode.*;
 import javassist.expr.*;
@@ -18,10 +19,13 @@ public class IncrementRewriter extends Rewriter {
     final Matcher[] incrementMatcher = {
         Or(Exactly(Opcode.DUP), Skip),
         Or(Opcode.GETFIELD, Opcode.GETSTATIC),
+        // TODO
+        // Or(Exactly(Opcode.DUP_X1), Skip),
         Or(Opcode.ICONST_0, Opcode.ICONST_1,
            Opcode.ICONST_2, Opcode.ICONST_3,
            Opcode.ICONST_4, Opcode.ICONST_5, Opcode.ICONST_M1),
         Exactly(Opcode.IADD),
+        // Or(Exactly(Opcode.DUP_X1), Skip),
         // matches PUTFIELD if 3 bytecode before is GETFIELD
         // matches PUTSTATIC if 3 bytecode before is GETSTATIC
         Pairs(3, Opcode.GETFIELD,  Opcode.PUTFIELD,
@@ -253,7 +257,6 @@ public class IncrementRewriter extends Rewriter {
                                 // top of stack: val
                                 (byte)Opcode.POP});
                     }
-
                 }
 
                 index = getNextSequence(ci, incrementMatcher);
@@ -265,6 +268,57 @@ public class IncrementRewriter extends Rewriter {
 
         // TODO: long
         // $theUnsafe.getAndAddLong
+    }
+
+    /**
+     * Replace bytecode in range [index, index+size) with replacement
+     *
+     * replacement has to be an array of opcodes with their arguments
+     * e.g. {{Opcode.GETSTATIC, 100}, {Opcode.DUP}}
+     */
+    private void replaceBytecode(CodeIterator ci, int index, int size,
+                                 byte[][] replacement) throws BadBytecode {
+        int end = index + size;
+        int i = 0;
+        for (; i < replacement.length; i++) {
+            if (index + replacement[i].length > end)
+                break;
+
+            ci.write(replacement[i], index);
+            index += replacement[i].length;
+        }
+
+        if (i < replacement.length) {
+            // // useless Java generics: left as reference
+            // // Java's gnerics is pure rubbish with primitive types
+            // Stream<Byte> toWriteStream = IntStream
+            //     .range(i, replacement.length)
+            //     // Stream.skip does not work
+            //     // because byte is not available for generics
+            //     .mapToObj(j -> replacement[j])
+            //     // stream of byte[]
+            //     // need to flatMap stream of Byte[] (boxed)
+            //     .flatMap(byteArr -> {
+            //             Byte[] boxed = new Byte[byteArr.length];
+            //             for (int k = 0; k < byteArr.length; k++)
+            //                 boxed[k] = byteArr[k];
+            //             return Arrays.stream(boxed);
+            //         }); // boxing byte[] is not available out of the box
+
+            byte[] toWrite;
+
+            int length = 0;
+            for (int j = i; j < replacement.length; j++)
+                length += replacement[j].length;
+            toWrite = new byte[length];
+            int idx = 0;
+            for (int j = i; j < replacement.length; j++)
+                for (byte b : replacement[j])
+                    toWrite[idx++] = b;
+
+            // insertAt expects opcode boundary
+            ci.insertAt(end, toWrite);
+        }
     }
 
     private int getNextSequence(CodeIterator ci, Matcher[] matchers)
