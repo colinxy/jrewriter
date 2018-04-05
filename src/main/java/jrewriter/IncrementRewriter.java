@@ -181,17 +181,6 @@ public class IncrementRewriter extends Rewriter {
                     }
 
                     int iconst = ci.byteAt(getIndex+3);
-                    // int delta = 0;
-                    // switch (iconst) {
-                    // case Opcode.ICONST_0: delta = 0; break;
-                    // case Opcode.ICONST_1: delta = 1; break;
-                    // case Opcode.ICONST_2: delta = 2; break;
-                    // case Opcode.ICONST_3: delta = 3; break;
-                    // case Opcode.ICONST_4: delta = 4; break;
-                    // case Opcode.ICONST_5: delta = 5; break;
-                    // case Opcode.ICONST_M1: delta = -1; break;
-                    // default: throw new Error("Unknown instruction: " + iconst);
-                    // }
 
                     // Class (only needed for static field)
                     int classIndex = constPool.getFieldrefClass(constPoolIndex);
@@ -213,49 +202,41 @@ public class IncrementRewriter extends Rewriter {
 
                     if (isStatic) {
                         // 8 bytes for GETSTATIC/PUTSTATIC
-                        // top of stack:
-                        ci.writeByte(Opcode.GETSTATIC, index);
-                        ci.write16bit(unsafeIndex, index+1);
-                        // top of stack: unsafe
-                        ci.writeByte(Opcode.LDC_W, index+3);
-                        ci.write16bit(classIndex, index+4);
-                        // top of stack: Class unsafe
-                        ci.writeByte(Opcode.NOP, index+6);
-                        ci.writeByte(Opcode.NOP, index+7);
-                        ci.insertAt(index+8, new byte[] {
-                                (byte)Opcode.GETSTATIC,
-                                (byte)(offsetIndex & 0xFF00),
-                                (byte)(offsetIndex & 0x00FF),
-                                // top of stack: offset Class unsafe
-                                (byte)iconst,
-                                // top of stack: delta offset Class unsafe
-                                // $theUnsafe.getAndAddInt(Class.class, offset$field, delta)
-                                (byte)Opcode.INVOKEVIRTUAL,
-                                (byte)(atomicAddIndex & 0xFF00),
-                                (byte)(atomicAddIndex & 0x00FF),
-                                // top of stack: val
-                                (byte)Opcode.POP});
+                        byte[][] bytecode = {
+                            opcodeWithArg(Opcode.GETSTATIC, unsafeIndex, 2),
+                            // top of stack: unsafe
+                            classIndex <= 0xFFFF
+                                ? opcodeWithArg(Opcode.LDC, classIndex, 1)
+                                : opcodeWithArg(Opcode.LDC_W, classIndex, 2),
+                            // top of stack: Class unsafe
+                            opcodeWithArg(Opcode.GETSTATIC, offsetIndex, 2),
+                            // top of stack: offset Class unsafe
+                            {(byte)iconst},
+                            // top of stack: delta offset Class unsafe
+                            opcodeWithArg(Opcode.INVOKEVIRTUAL, atomicAddIndex, 2),
+                            // top of stack: val
+                            {(byte)Opcode.POP},
+                        };
+
+                        replaceBytecode(ci, index, 8, bytecode);
                     } else {
                         // 9 bytes for GETFIELD/PUTFIELD
-                        ci.writeByte(Opcode.NOP, index);
-                        // top of stack: obj
-                        ci.writeByte(Opcode.GETSTATIC, index+1);
-                        ci.write16bit(unsafeIndex, index+2);
-                        // top of stack: unsafe obj
-                        ci.writeByte(Opcode.SWAP, index+4);
-                        // top of stack: obj unsafe
-                        ci.writeByte(Opcode.GETSTATIC, index+5);
-                        ci.write16bit(offsetIndex, index+6);
-                        // top of stack: offset obj unsafe
-                        ci.writeByte(iconst, index+8);
-                        // top of stack: delta offset obj unsafe
-                        // $theUnsafe.getAndAddInt(obj, offset$field, delta)
-                        ci.insertAt(index+9, new byte[] {
-                                (byte)Opcode.INVOKEVIRTUAL,
-                                (byte)(atomicAddIndex & 0xFF00),
-                                (byte)(atomicAddIndex & 0x00FF),
-                                // top of stack: val
-                                (byte)Opcode.POP});
+                        byte[][] bytecode = {
+                            // top of stack: obj
+                            opcodeWithArg(Opcode.GETSTATIC, unsafeIndex, 2),
+                            // top of stack: unsafe obj
+                            {(byte)Opcode.SWAP},
+                            // top of stack: obj unsafe
+                            opcodeWithArg(Opcode.GETSTATIC, offsetIndex, 2),
+                            // top of stack: offset obj unsafe
+                            {(byte)iconst},
+                            // top of stack: delta offset obj unsafe
+                            opcodeWithArg(Opcode.INVOKEVIRTUAL, atomicAddIndex, 2),
+                            // top of stack: val
+                            {(byte)Opcode.POP},
+                        };
+
+                        replaceBytecode(ci, index, 9, bytecode);
                     }
                 }
 
@@ -286,6 +267,10 @@ public class IncrementRewriter extends Rewriter {
 
             ci.write(replacement[i], index);
             index += replacement[i].length;
+        }
+
+        for (int j = index; j < end; j++) {
+            ci.writeByte(Opcode.NOP, j);
         }
 
         if (i < replacement.length) {
@@ -357,6 +342,41 @@ public class IncrementRewriter extends Rewriter {
             if (matcherIdx == 0)
                 beginIndex = index;
             matcherIdx++;
+        }
+    }
+
+    private byte[] opcodeWithArg(int opcode, int argument, int nBytes) {
+        switch (nBytes) {
+        case 1:
+            return new byte[] {
+                (byte)opcode,
+                (byte)(argument & 0xFF),
+            };
+        case 2:
+            return new byte[] {
+                (byte)opcode,
+                (byte)(argument & 0xFF00),
+                (byte)(argument & 0x00FF),
+            };
+        case 3:
+            return new byte[] {
+                (byte)opcode,
+                (byte)(argument & 0xFF0000),
+                (byte)(argument & 0x00FF00),
+                (byte)(argument & 0x0000FF),
+            };
+        case 4:
+            return new byte[] {
+                (byte)opcode,
+                (byte)(argument & 0xFF000000),
+                (byte)(argument & 0x00FF0000),
+                (byte)(argument & 0x0000FF00),
+                (byte)(argument & 0x000000FF),
+            };
+        default:
+            throw new IllegalArgumentException(
+                "Invalid argument nBytes, expected 1 <= nBytes <= 4, got " +
+                nBytes);
         }
     }
 }

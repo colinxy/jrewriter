@@ -1,6 +1,6 @@
 # jrewriter
 
-Run tests with `gradle test --rerun-tasks`.
+Run tests with `gradle test`.
 
 ## `GetSetRewriter`
 Not developed. See [README-getset.md](README-getset.md)
