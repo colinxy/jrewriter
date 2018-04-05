@@ -6,19 +6,16 @@ dacapo=(
     "tomcat" "tradebeans" "tradesoap" "xalan"
 )
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+for test in "${dacapo[@]}"
+do
+    # TODO
+    # java.system.class.loader only works for single main class
+    # need a custom built dacapo build with custom Harness
+    java -cp build/libs/jrewriter-0.1.0.jar:bench/dacapo-9.12-MR1-bach.jar \
+         Harness "$test"
+done
 
-cd "$DIR/../" && {
-    # gradle has to be run from project root directory
-
-    for test in "${dacapo[@]}"
-    do
-        java -Djava.system.class.loader=jrewriter.RewriterClassLoader \
-             -cp build/libs/jrewriter-0.1.0.jar:bench/dacapo-9.12-MR1-bach.jar \
-             Harness "$test"
-    done
-}
 
 # still failing:
 # batik

@@ -39,7 +39,7 @@ public class RewriterClassLoader extends ClassLoader {
         for (String wl : whitelist) {
             if (className.startsWith(wl)) {
                 if (DEBUG)
-                    System.out.println("loading " + className + " by system");
+                    System.out.println("system loading " + className);
 
                 return super.loadClass(className);
             }
@@ -52,13 +52,15 @@ public class RewriterClassLoader extends ClassLoader {
             cc = pool.get(className);
         } catch (NotFoundException ex) {
             ex.printStackTrace();
-            throw new RuntimeException(ex);
+            throw new ClassNotFoundException(className + " not found", ex);
         }
 
         // Rewriter rewriter = new GetSetRewriter(pool, cc);
         Rewriter rewriter = new IncrementRewriter(pool, cc);
         byte[] bytecode = rewriter.toBytecode();
 
+        if (DEBUG)
+            System.out.println("loaded " + className);
         return defineClass(className, bytecode, 0, bytecode.length);
     }
 }
