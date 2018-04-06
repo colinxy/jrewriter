@@ -20,6 +20,31 @@ import static jrewriter.BytecodeSeqMatcher.Skip;
 public class IncrementRewriter extends Rewriter {
     final Logger logger = LoggerFactory.getLogger(IncrementRewriter.class);
 
+    private static final String getUnsafeCode =
+        "java.lang.reflect.Field $theUnsafeField;\n" +
+        "try {\n" +
+        "    $theUnsafeField = sun.misc.Unsafe.class.getDeclaredField(\"theUnsafe\");\n" +
+        "} catch (NoSuchFieldException ex) {\n" +
+        "    ex.printStackTrace();\n" +
+        "    throw new Error(ex);\n" +
+        "}\n" +
+        "$theUnsafeField.setAccessible(true);\n" +
+        "try {\n" +
+        "    $theUnsafe = (sun.misc.Unsafe) $theUnsafeField.get(null);\n" +
+        "} catch (IllegalAccessException ex) {\n" +
+        "    ex.printStackTrace();\n" +
+        "    throw new Error(ex);\n" +
+        "}\n";
+
+    private static final String getOffsetCode =
+        "java.lang.reflect.Field field${name};\n" +
+        "try {\n" +
+        "    field${name} = {class}.class.getDeclaredField(\"{name}\");\n" +
+        "} catch (NoSuchFieldException ex) {\n" +
+        "    ex.printStackTrace();\n" +
+        "    throw new Error(ex);\n" +
+        "}\n";
+
     // sequence of bytecode that does increment
     final Matcher[] incrementMatcher = {
         Or(Exactly(Opcode.DUP), Skip),
@@ -58,22 +83,6 @@ public class IncrementRewriter extends Rewriter {
         unsafe.setAccessFlags(AccessFlag.FINAL | AccessFlag.STATIC | AccessFlag.PRIVATE);
         classFile.addField(unsafe);
 
-        String getUnsafe =
-            "java.lang.reflect.Field $theUnsafeField;\n" +
-            "try {\n" +
-            "    $theUnsafeField = sun.misc.Unsafe.class.getDeclaredField(\"theUnsafe\");\n" +
-            "} catch (NoSuchFieldException ex) {\n" +
-            "    ex.printStackTrace();\n" +
-            "    throw new Error(ex);\n" +
-            "}\n" +
-            "$theUnsafeField.setAccessible(true);\n" +
-            "try {\n" +
-            "    $theUnsafe = (sun.misc.Unsafe) $theUnsafeField.get(null);\n" +
-            "} catch (IllegalAccessException ex) {\n" +
-            "    ex.printStackTrace();\n" +
-            "    throw new Error(ex);\n" +
-            "}\n";
-
         StringBuilder sb = new StringBuilder();
         // get java.lang.reflect.Field objects for relavant fields
         // <Class>.class.getDeclaredField("field")
@@ -93,15 +102,7 @@ public class IncrementRewriter extends Rewriter {
             offset.setAccessFlags(AccessFlag.FINAL | AccessFlag.STATIC | AccessFlag.PUBLIC);
             classFile.addField(offset);
 
-            String getOffset =
-                "java.lang.reflect.Field field${name};\n" +
-                "try {\n" +
-                "    field${name} = {class}.class.getDeclaredField(\"{name}\");\n" +
-                "} catch (NoSuchFieldException ex) {\n" +
-                "    ex.printStackTrace();\n" +
-                "    throw new Error(ex);\n" +
-                "}\n";
-
+            String getOffset = getOffsetCode;
             if ((finfo.getAccessFlags() & AccessFlag.STATIC) != 0)
                 getOffset += "offset${name} = $theUnsafe.staticFieldOffset(field${name});\n";
             else
@@ -116,7 +117,7 @@ public class IncrementRewriter extends Rewriter {
 
         // add static initializer
         CtConstructor staticInit = cc.makeClassInitializer();
-        staticInit.insertBefore("{" + getUnsafe + getOffsets + "}");
+        staticInit.insertBefore("{" + getUnsafeCode + getOffsets + "}");
     }
 
     public void rewriteIncrements() throws BadBytecode {
@@ -154,11 +155,11 @@ public class IncrementRewriter extends Rewriter {
                 // index+6: <index>
                 // END index+8
 
-                final boolean isStatic = ci.byteAt(index) != Opcode.DUP;
-                final int getIndex = isStatic ? index : index+1;
-                final int constPoolIndex = ci.u16bitAt(getIndex+1);
-                final String field = constPool.getFieldrefName(constPoolIndex);
-                final String klass = constPool.getFieldrefClassName(constPoolIndex);
+                boolean isStatic = ci.byteAt(index) != Opcode.DUP;
+                int getIndex = isStatic ? index : index+1;
+                int constPoolIndex = ci.u16bitAt(getIndex+1);
+                String field = constPool.getFieldrefName(constPoolIndex);
+                String klass = constPool.getFieldrefClassName(constPoolIndex);
 
                 boolean validate =
                     // get/set same field
