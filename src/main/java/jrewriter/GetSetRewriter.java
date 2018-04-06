@@ -1,5 +1,8 @@
 package jrewriter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.List;
 import javassist.*;
@@ -8,6 +11,8 @@ import javassist.expr.*;
 
 
 public class GetSetRewriter extends Rewriter {
+    final Logger logger = LoggerFactory.getLogger(GetSetRewriter.class);
+
     public GetSetRewriter(ClassPool pool, CtClass cc) {
         super(pool, cc);
     }
@@ -51,9 +56,7 @@ public class GetSetRewriter extends Rewriter {
                         if (f.isReader()) {
                             String klass = f.getClassName();
                             String field = f.getFieldName();
-                            if (RewriterClassLoader.DEBUG)
-                                System.out.println("GETFIELD "
-                                                   + klass + "." + field);
+                            logger.info("GETFIELD " + klass + "." + field);
 
                             // TODO: this will generate a invokevirtual
                             // but we want a invokespecial
@@ -65,9 +68,7 @@ public class GetSetRewriter extends Rewriter {
                         } else if (f.isWriter()) {
                             String klass = f.getClassName();
                             String field = f.getFieldName();
-                            if (RewriterClassLoader.DEBUG)
-                                System.out.println("PUTFIELD "
-                                                   + klass + "." + field);
+                            logger.info("PUTFIELD " + klass + "." + field);
 
                             // TODO: same problem as getter
                             String set = String.format("$0.set$%s($1);", field);

@@ -1,5 +1,8 @@
 package jrewriter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.util.*;
 import java.util.stream.*;
@@ -15,6 +18,8 @@ import static jrewriter.BytecodeSeqMatcher.Skip;
 
 
 public class IncrementRewriter extends Rewriter {
+    final Logger logger = LoggerFactory.getLogger(IncrementRewriter.class);
+
     // sequence of bytecode that does increment
     final Matcher[] incrementMatcher = {
         Or(Exactly(Opcode.DUP), Skip),
@@ -76,15 +81,11 @@ public class IncrementRewriter extends Rewriter {
         // new because we want to avoid concurrent modification
         final List<FieldInfo> fields = new ArrayList<>(classFile.getFields());
         for (FieldInfo finfo : fields) {
-            // System.out.println(finfo.getName()+" "+finfo.getDescriptor());
-
             if (!Descriptor.of("long").equals(finfo.getDescriptor())
                 && !Descriptor.of("int").equals(finfo.getDescriptor())
                 || (finfo.getAccessFlags​() & AccessFlag.FINAL) != 0) {
                 continue;
             }
-
-            // System.out.println(finfo.getName()+" "+finfo.getDescriptor());
 
             FieldInfo offset = new FieldInfo(
                 constPool, "offset$" + finfo.getName(), Descriptor.of("long"));
@@ -106,8 +107,6 @@ public class IncrementRewriter extends Rewriter {
             else
                 getOffset += "offset${name} = $theUnsafe.objectFieldOffset(field${name});\n";
 
-            // getOffset += "System.out.println(\"{name}: \" + offset${name});\n";
-
             sb.append(getOffset
                       .replace("{name}", finfo.getName())
                       .replace("{class}", classFile.getName()));
@@ -125,9 +124,7 @@ public class IncrementRewriter extends Rewriter {
         // locate sequence of bytecode that does increment
         final List<MethodInfo> methods = classFile.getMethods();
         for (MethodInfo minfo : methods) {
-            if (RewriterClassLoader.DEBUG)
-                System.out.println(
-                    "==> " + minfo.getName() + ":" + minfo.getDescriptor());
+            logger.debug("At "+ minfo.getName() +":"+ minfo.getDescriptor());
 
             CodeAttribute ca = minfo.getCodeAttribute();
             CodeIterator ci = ca.iterator();
@@ -173,12 +170,17 @@ public class IncrementRewriter extends Rewriter {
 
                 if (validate) {
 
-                    if (RewriterClassLoader.DEBUG) {
-                        String code = ci.byteAt(getIndex) == Opcode.GETFIELD
-                            ? "GETFIELD "
-                            : "GETSTATIC ";
-                        System.out.println(code + klass + "." + field);
-                    }
+                    logger.info(String.format(
+                                    "%s.%s index %d: %s #%d  (%s.%s)",
+                                    cc.getName(),
+                                    minfo.getName(),
+                                    getIndex,
+                                    (ci.byteAt(getIndex) == Opcode.GETFIELD
+                                     ? "GETFIELD"
+                                     : "GETSTATIC"),
+                                    constPoolIndex,
+                                    klass,
+                                    field));
 
                     int iconst = ci.byteAt(getIndex+3);
 

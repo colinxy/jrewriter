@@ -1,11 +1,16 @@
 package jrewriter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import javassist.*;
 import java.util.*;
 
 
 public class RewriterClassLoader extends ClassLoader {
+    final Logger logger = LoggerFactory.getLogger(RewriterClassLoader.class);
+
     private ClassPool pool;
 
     final static boolean DEBUG = !Optional
@@ -38,14 +43,12 @@ public class RewriterClassLoader extends ClassLoader {
 
         for (String wl : whitelist) {
             if (className.startsWith(wl)) {
-                if (DEBUG)
-                    System.out.println("system loading " + className);
+                logger.debug("System loading " + className);
 
                 return super.loadClass(className);
             }
         }
-        if (DEBUG)
-            System.out.println("loading " + className);
+        logger.info("Loading " + className);
 
         CtClass cc;
         try {
@@ -59,8 +62,7 @@ public class RewriterClassLoader extends ClassLoader {
         Rewriter rewriter = new IncrementRewriter(pool, cc);
         byte[] bytecode = rewriter.toBytecode();
 
-        if (DEBUG)
-            System.out.println("loaded " + className);
+        logger.info("Loaded " + className);
         return defineClass(className, bytecode, 0, bytecode.length);
     }
 }
