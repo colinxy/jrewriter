@@ -1,0 +1,17 @@
+* incorrect benchmark: only Harness class is loaded by
+  jrewriter.RewriterClassLoader.  Need to write Custom Harness class
+  to make sure all classes are loaded with our class loader.
+
+* More features: can allow local variables, not just constants.
+  ICONST, also ILOAD
+
+* Cover all cases?  No.  Static fields can be done by implementing a
+  stack based simulator (interpreter), and just check there is not
+  statement having side effects between GETSTATIC and SETSTATIC.
+  Non-static fields are not possible because we cannot cover all cases
+  of GETFIELD and SETFIELD operating on the same object.  Currently we
+  make sure there are referring to same object and field by checking
+  DUP instruction immediately before GETFIELD.
+
+  An example of a case currently not handled: taking result of (i++),
+  there is DUP_X1 instruction between GET and SET instructions.
