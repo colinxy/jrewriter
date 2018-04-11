@@ -52,12 +52,17 @@ public class RewriterClassLoader extends ClassLoader {
             }
         }
         logger.info("Loading " + className);
+        logger.debug("from " + pool.find(className) +
+                     " with " + this);
+        logger.debug(pool.toString()); // classpath
 
         CtClass cc;
         try {
             cc = pool.get(className);
         } catch (NotFoundException ex) {
-            ex.printStackTrace();
+            logger.error(
+                "Failed to load class " + className + " with " + this,
+                ex);
             throw new ClassNotFoundException(className + " not found", ex);
         }
 
