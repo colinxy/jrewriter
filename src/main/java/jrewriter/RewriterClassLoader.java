@@ -22,8 +22,11 @@ public class RewriterClassLoader extends ClassLoader {
         "java.",
         "javafx.",
         "javax.",
-        "jrewrite.",
         "sun.",
+        // this project's dependencies (cannot be loaded again)
+        "jrewriter.",
+        "javassist.",
+        "org.slf4j.",
     };
 
     public RewriterClassLoader(ClassLoader parent) {
@@ -64,5 +67,9 @@ public class RewriterClassLoader extends ClassLoader {
 
         logger.info("Loaded " + className);
         return defineClass(className, bytecode, 0, bytecode.length);
+    }
+
+    public ClassPath insertClassPath(ClassPath cp) {
+        return pool.insertClassPath(cp);
     }
 }
