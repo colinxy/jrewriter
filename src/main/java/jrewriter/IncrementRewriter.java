@@ -210,6 +210,14 @@ public class IncrementRewriter extends Rewriter {
                         "getAndAddInt",
                         "(Ljava/lang/Object;JI)I");
 
+                    logger.debug(String.format(
+                                     "classIndex: %d, unsafeIndex: %d, " +
+                                     "offsetIndex: %d, atomicAddIndex: %d",
+                                     classIndex,
+                                     unsafeIndex,
+                                     offsetIndex,
+                                     atomicAddIndex));
+
                     if (isStatic) {
                         // 8 bytes for GETSTATIC/PUTSTATIC
                         byte[][] bytecode = {
@@ -365,22 +373,22 @@ public class IncrementRewriter extends Rewriter {
         case 2:
             return new byte[] {
                 (byte)opcode,
-                (byte)(argument & 0xFF00),
+                (byte)((argument & 0xFF00) >> 8),
                 (byte)(argument & 0x00FF),
             };
         case 3:
             return new byte[] {
                 (byte)opcode,
-                (byte)(argument & 0xFF0000),
-                (byte)(argument & 0x00FF00),
+                (byte)((argument & 0xFF0000) >> 16),
+                (byte)((argument & 0x00FF00) >> 8),
                 (byte)(argument & 0x0000FF),
             };
         case 4:
             return new byte[] {
                 (byte)opcode,
-                (byte)(argument & 0xFF000000),
-                (byte)(argument & 0x00FF0000),
-                (byte)(argument & 0x0000FF00),
+                (byte)((argument & 0xFF000000) >> 24),
+                (byte)((argument & 0x00FF0000) >> 16),
+                (byte)((argument & 0x0000FF00) >> 8),
                 (byte)(argument & 0x000000FF),
             };
         default:
