@@ -68,6 +68,9 @@ public class IncrementRewriter extends Rewriter {
     }
 
     public void rewrite() {
+        // interface fields are static and final
+        if (classFile.isInterface()) return;
+
         try {
             prepUnsafeOffsets();
             rewriteIncrements();
@@ -128,6 +131,10 @@ public class IncrementRewriter extends Rewriter {
             logger.debug("At "+ minfo.getName() +":"+ minfo.getDescriptor());
 
             CodeAttribute ca = minfo.getCodeAttribute();
+            if (ca == null) {
+                logger.debug("Code attribute not specified");
+                continue;
+            }
             CodeIterator ci = ca.iterator();
 
             int index = getNextSequence(ci, incrementMatcher);
