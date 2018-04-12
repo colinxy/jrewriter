@@ -13,6 +13,8 @@ public class RewriterClassLoader extends ClassLoader {
 
     private ClassPool pool;
 
+    private List<ClassLoader> loaders = new ArrayList<>();
+
     final static boolean DEBUG = !Optional
         .ofNullable(System.getenv("JREWRITER_DEBUG"))
         .orElse("")
@@ -74,7 +76,14 @@ public class RewriterClassLoader extends ClassLoader {
         return defineClass(className, bytecode, 0, bytecode.length);
     }
 
-    public ClassPath insertClassPath(ClassPath cp) {
-        return pool.insertClassPath(cp);
+    public void insertLoaderClassPath(ClassLoader loader) {
+        // keep loader alive
+        // LoaderClassPath only holds a WeakReference to it
+        loaders.add(loader);
+        pool.insertClassPath(new LoaderClassPath(loader));
+    }
+
+    public String toString() {
+        return super.toString() + " " + pool.toString();
     }
 }
