@@ -5,11 +5,18 @@ public class Simple {
     static int staticField = 100;
     final int immutable;
 
+    final static int staticImmutable;
+
     static {
         System.out.println("Hello from static initializer");
+        staticImmutable = 1000;
     } {
         System.out.println("Hello from initializer");
         immutable = 100;
+    }
+
+    public static int staticField() {
+        return staticImmutable;
     }
 
     public static int refSelf() {

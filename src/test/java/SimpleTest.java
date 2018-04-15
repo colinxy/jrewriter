@@ -48,6 +48,7 @@ public class SimpleTest {
     @Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
+                {"staticField", 1000},
                 {"refSelf", 0},
                 {"incResult", 2},
                 {"refOther1", 1},

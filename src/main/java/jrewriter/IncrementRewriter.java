@@ -120,7 +120,7 @@ public class IncrementRewriter extends Rewriter {
 
         // add static initializer
         CtConstructor staticInit = cc.makeClassInitializer();
-        staticInit.insertBefore("{" + getUnsafeCode + getOffsets + "}");
+        staticInit.insertAfter("{" + getUnsafeCode + getOffsets + "}");
     }
 
     public void rewriteIncrements() throws BadBytecode {
