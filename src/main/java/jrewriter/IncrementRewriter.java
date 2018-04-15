@@ -303,8 +303,17 @@ public class IncrementRewriter extends Rewriter {
                     toWrite[idx++] = b;
 
             // insertAt expects opcode boundary
-            // also do not insertAt the end (breaks goto bytecode)
+            // also do not insertAt the end (breaks goto offset)
             ci.insertAt(index, toWrite);
+            // From documentation: If the instruction at the given
+            // index is at the beginning of a block statement, then
+            // the bytecode is inserted within that block
+
+            // TODO:
+            // also from documentation: returns the index indicating
+            // the first byte of the inserted byte sequence, which
+            // might be different from pos
+
             index += leftBytes;
             end += leftBytes;
         }
