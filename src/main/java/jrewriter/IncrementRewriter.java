@@ -282,45 +282,35 @@ public class IncrementRewriter extends Rewriter {
         for (; i < replacement.length; i++) {
             if (index + replacement[i].length > end)
                 break;
+            if (i != replacement.length-1
+                && index + replacement[i].length == end)
+                break;
 
             ci.write(replacement[i], index);
             index += replacement[i].length;
         }
 
-        for (int j = index; j < end; j++) {
-            ci.writeByte(Opcode.NOP, j);
-        }
-
         if (i < replacement.length) {
-            // // useless Java generics: left as reference
-            // // Java's gnerics is pure rubbish with primitive types
-            // Stream<Byte> toWriteStream = IntStream
-            //     .range(i, replacement.length)
-            //     // Stream.skip does not work
-            //     // because byte is not available for generics
-            //     .mapToObj(j -> replacement[j])
-            //     // stream of byte[]
-            //     // need to flatMap stream of Byte[] (boxed)
-            //     .flatMap(byteArr -> {
-            //             Byte[] boxed = new Byte[byteArr.length];
-            //             for (int k = 0; k < byteArr.length; k++)
-            //                 boxed[k] = byteArr[k];
-            //             return Arrays.stream(boxed);
-            //         }); // boxing byte[] is not available out of the box
-
             byte[] toWrite;
 
-            int length = 0;
+            int leftBytes = 0;
             for (int j = i; j < replacement.length; j++)
-                length += replacement[j].length;
-            toWrite = new byte[length];
+                leftBytes += replacement[j].length;
+            toWrite = new byte[leftBytes];
             int idx = 0;
             for (int j = i; j < replacement.length; j++)
                 for (byte b : replacement[j])
                     toWrite[idx++] = b;
 
             // insertAt expects opcode boundary
-            ci.insertAt(end, toWrite);
+            // also do not insertAt the end (breaks goto bytecode)
+            ci.insertAt(index, toWrite);
+            index += leftBytes;
+            end += leftBytes;
+        }
+
+        for (int j = index; j < end; j++) {
+            ci.writeByte(Opcode.NOP, j);
         }
     }
 

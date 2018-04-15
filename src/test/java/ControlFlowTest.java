@@ -13,14 +13,14 @@ import static org.junit.Assert.assertEquals;
 
 
 @RunWith(Parameterized.class)
-public class SimpleTest {
+public class ControlFlowTest {
     static RewriterClassLoader loader;
-    Class<?> simple;
+    Class<?> controlFlow;
 
     private String methodName;
     private int result;
 
-    public SimpleTest(String methodName, int result) {
+    public ControlFlowTest(String methodName, int result) {
         this.methodName = methodName;
         this.result = result;
     }
@@ -32,7 +32,7 @@ public class SimpleTest {
 
     @Before
     public void loadClass() throws ClassNotFoundException {
-        simple = loader.loadClass("Simple");
+        controlFlow = loader.loadClass("ControlFlow");
     }
 
     @Test
@@ -40,7 +40,7 @@ public class SimpleTest {
         throws NoSuchMethodException
         , IllegalAccessException
         , InvocationTargetException {
-        int res = (Integer) simple.getMethod(methodName).invoke(null);
+        int res = (Integer) controlFlow.getMethod(methodName).invoke(null);
         assertEquals(result, res);
         System.out.println(methodName + ": " + res);
     }
@@ -48,14 +48,8 @@ public class SimpleTest {
     @Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
-                {"staticField", 1000},
-                {"refSelf", 0},
-                {"incResult", 2},
-                {"refOther1", 1},
-                {"refOther2", 1},
-                {"refStatic", 101},
-                {"notIncrement1", 1},
-                {"notIncrement2", 1},
+                {"endOfBranch", 12345},
+                {"endOfBranchStatic", 12345},
             });
     }
 }
