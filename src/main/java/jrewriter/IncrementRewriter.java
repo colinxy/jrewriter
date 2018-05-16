@@ -20,6 +20,10 @@ import static jrewriter.BytecodeSeqMatcher.Skip;
 public class IncrementRewriter extends Rewriter {
     final Logger logger = LoggerFactory.getLogger(IncrementRewriter.class);
 
+    final int AIINCSTATIC = 203;
+    final int AIINCFIELD  = 204;
+    boolean useAiinc = false;
+
     private static final String getUnsafeCode =
         "java.lang.reflect.Field $theUnsafeField;\n" +
         "try {\n" +
@@ -49,7 +53,7 @@ public class IncrementRewriter extends Rewriter {
     final Matcher[] incrementMatcher = {
         Or(Exactly(Opcode.DUP), Skip),
         Or(Opcode.GETFIELD, Opcode.GETSTATIC),
-        // TODO
+        // TODO: support increment result
         // Or(Exactly(Opcode.DUP_X1), Skip),
         Or(Opcode.ICONST_0, Opcode.ICONST_1,
            Opcode.ICONST_2, Opcode.ICONST_3,
@@ -64,7 +68,13 @@ public class IncrementRewriter extends Rewriter {
 
 
     public IncrementRewriter(ClassPool pool, CtClass cc) {
+        this(pool, cc, false);
+    }
+
+    public IncrementRewriter(ClassPool pool, CtClass cc,
+                             boolean useAiinc) {
         super(pool, cc);
+        this.useAiinc = useAiinc;
     }
 
     public void rewrite() {
@@ -177,7 +187,6 @@ public class IncrementRewriter extends Rewriter {
                         || !isStatic && ci.byteAt(getIndex) == Opcode.GETFIELD);
 
                 if (validate) {
-
                     logger.info(String.format(
                                     "%s.%s index %d: %s #%d  (%s.%s)",
                                     cc.getName(),
@@ -218,8 +227,7 @@ public class IncrementRewriter extends Rewriter {
                                      offsetIndex,
                                      atomicAddIndex));
 
-                    if (isStatic) {
-                        // 8 bytes for GETSTATIC/PUTSTATIC
+                    if (isStatic && !useAiinc) {
                         byte[][] bytecode = {
                             opcodeWithArg(Opcode.GETSTATIC, unsafeIndex, 2),
                             // top of stack: unsafe
@@ -236,9 +244,9 @@ public class IncrementRewriter extends Rewriter {
                             {(byte)Opcode.POP},
                         };
 
+                        // 8 bytes for GETSTATIC/PUTSTATIC
                         replaceBytecode(ci, index, 8, bytecode);
-                    } else {
-                        // 9 bytes for GETFIELD/PUTFIELD
+                    } else if (!isStatic && !useAiinc) {
                         byte[][] bytecode = {
                             // top of stack: obj
                             opcodeWithArg(Opcode.GETSTATIC, unsafeIndex, 2),
@@ -254,6 +262,32 @@ public class IncrementRewriter extends Rewriter {
                             {(byte)Opcode.POP},
                         };
 
+                        // 9 bytes for GETFIELD/PUTFIELD
+                        replaceBytecode(ci, index, 9, bytecode);
+                    } else if (isStatic && useAiinc) {
+                        // AIINCSTATIC
+                        byte[][] bytecode = {
+                            {(byte)iconst},
+                            // top of stack: delta
+                            opcodeWithArg(AIINCSTATIC, constPoolIndex, 2),
+                            // top of stack: previous_val
+                            {(byte)Opcode.POP},
+                        };
+
+                        // 8 bytes for GETSTATIC/PUTSTATIC
+                        replaceBytecode(ci, index, 8, bytecode);
+                    } else {    // !isStatic && useAiinc
+                        // AIINCFIELD
+                        byte[][] bytecode = {
+                            // top of stack: obj
+                            {(byte)iconst},
+                            // top of stack: delta obj
+                            opcodeWithArg(AIINCFIELD, constPoolIndex, 2),
+                            // top of stack: previous_val
+                            {(byte)Opcode.POP},
+                        };
+
+                        // 9 bytes for GETFIELD/PUTFIELD
                         replaceBytecode(ci, index, 9, bytecode);
                     }
                 }
@@ -262,7 +296,8 @@ public class IncrementRewriter extends Rewriter {
             }
 
             // $theUnsafe.getAndAddInt need max_stack >= 5
-            ca.computeMaxStack();
+            if (!useAiinc)
+                ca.computeMaxStack();
         }
 
         // TODO: long
@@ -309,7 +344,7 @@ public class IncrementRewriter extends Rewriter {
             // index is at the beginning of a block statement, then
             // the bytecode is inserted within that block
 
-            // TODO:
+            // TODO: robustness
             // also from documentation: returns the index indicating
             // the first byte of the inserted byte sequence, which
             // might be different from pos

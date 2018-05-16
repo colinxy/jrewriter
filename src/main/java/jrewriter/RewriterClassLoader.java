@@ -19,6 +19,10 @@ public class RewriterClassLoader extends ClassLoader {
         .ofNullable(System.getenv("JREWRITER_DEBUG"))
         .orElse("")
         .equals("");
+    final static boolean AIINC = !Optional
+        .ofNullable(System.getenv("JREWRITER_AIINC"))
+        .orElse("")
+        .equals("");
 
     final String[] whitelist = {
         "java.",
@@ -69,7 +73,7 @@ public class RewriterClassLoader extends ClassLoader {
         }
 
         // Rewriter rewriter = new GetSetRewriter(pool, cc);
-        Rewriter rewriter = new IncrementRewriter(pool, cc);
+        Rewriter rewriter = new IncrementRewriter(pool, cc, AIINC);
         byte[] bytecode = rewriter.toBytecode();
 
         logger.info("Loaded " + className);
