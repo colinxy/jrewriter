@@ -82,7 +82,7 @@ public class IncrementRewriter extends Rewriter {
         if (classFile.isInterface()) return;
 
         try {
-            prepUnsafeOffsets();
+            if (!useAiinc) prepUnsafeOffsets();
             rewriteIncrements();
         } catch (BadBytecode | CannotCompileException ex) {
             ex.printStackTrace();
