@@ -201,31 +201,37 @@ public class IncrementRewriter extends Rewriter {
 
                     int iconst = ci.byteAt(getIndex+3);
 
-                    // Class (only needed for static field)
-                    int classIndex = constPool.getFieldrefClass(constPoolIndex);
-                    // $theUnsafe
-                    int unsafeIndex = constPool.addFieldrefInfo(
-                        constPool.addClassInfo(classFile.getName()),
-                        "$theUnsafe",
-                        Descriptor.of("sun.misc.Unsafe"));
-                    // offset$field
-                    int offsetIndex = constPool.addFieldrefInfo(
-                        classIndex,
-                        "offset$" + field,
-                        Descriptor.of("long"));
-                    // $theUnsafe.getAndAddInt(Object o, long offset, int delta)
-                    int atomicAddIndex = constPool.addMethodrefInfo(
-                        constPool.addClassInfo("sun.misc.Unsafe"),
-                        "getAndAddInt",
-                        "(Ljava/lang/Object;JI)I");
+                    int classIndex = 0,
+                        unsafeIndex = 0,
+                        offsetIndex = 0,
+                        atomicAddIndex = 0;
+                    if (!useAiinc) {
+                        // Class (only needed for static field)
+                        classIndex = constPool.getFieldrefClass(constPoolIndex);
+                        // $theUnsafe
+                        unsafeIndex = constPool.addFieldrefInfo(
+                            constPool.addClassInfo(classFile.getName()),
+                            "$theUnsafe",
+                            Descriptor.of("sun.misc.Unsafe"));
+                        // offset$field
+                        offsetIndex = constPool.addFieldrefInfo(
+                            classIndex,
+                            "offset$" + field,
+                            Descriptor.of("long"));
+                        // $theUnsafe.getAndAddInt(Object o, long offset, int delta)
+                        atomicAddIndex = constPool.addMethodrefInfo(
+                            constPool.addClassInfo("sun.misc.Unsafe"),
+                            "getAndAddInt",
+                            "(Ljava/lang/Object;JI)I");
 
-                    logger.debug(String.format(
-                                     "classIndex: %d, unsafeIndex: %d, " +
-                                     "offsetIndex: %d, atomicAddIndex: %d",
-                                     classIndex,
-                                     unsafeIndex,
-                                     offsetIndex,
-                                     atomicAddIndex));
+                        logger.debug(String.format(
+                                         "classIndex: %d, unsafeIndex: %d, " +
+                                         "offsetIndex: %d, atomicAddIndex: %d",
+                                         classIndex,
+                                         unsafeIndex,
+                                         offsetIndex,
+                                         atomicAddIndex));
+                    }
 
                     if (isStatic && !useAiinc) {
                         byte[][] bytecode = {
